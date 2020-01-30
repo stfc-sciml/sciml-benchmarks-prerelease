@@ -1,7 +1,7 @@
 import argparse
 import tensorflow as tf
 
-PARSER = argparse.ArgumentParser(description="UNet-medical")
+PARSER = argparse.ArgumentParser(description="UNet-Sentinel3")
 
 PARSER.add_argument('--exec_mode',
                     choices=['train', 'train_and_predict', 'predict'],

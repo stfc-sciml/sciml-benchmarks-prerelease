@@ -6,3 +6,5 @@ __pycache__
 *.swp
 /results
 *.zip
+dataset/
+results/

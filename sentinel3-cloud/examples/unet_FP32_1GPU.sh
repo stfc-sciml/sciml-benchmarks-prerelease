@@ -19,9 +19,10 @@
      --data_dir $2 \
      --model_dir $3 \
      --warmup_steps 200 \
-     --log_every 100 \
-     --max_steps 320000 \
-     --batch_size 2 \
+     --log_every 10 \
+     --max_steps 1000 \
+     --batch_size 256 \
+     --learning_rate 0.01 \
+     --momentum 0.01 \
      --benchmark \
      --exec_mode train_and_predict \
-     --augment

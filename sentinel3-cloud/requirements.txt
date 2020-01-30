@@ -1,2 +1,6 @@
-numpy==1.14.5
+numpy==1.17.0
 Pillow==6.2.0
+pandas
+h5netcdf
+xarray
+scikit-image

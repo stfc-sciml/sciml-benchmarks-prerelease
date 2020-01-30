@@ -52,7 +52,8 @@ class ProfilerHook(tf.train.SessionRunHook):
             fetches=[
                 'UNet/cross_loss_ref:0',
                 'UNet/dice_loss_ref:0',
-                'UNet/total_loss_ref:0']
+                'UNet/total_loss_ref:0',
+                ]
         )
         self._t0 = time.time()
 

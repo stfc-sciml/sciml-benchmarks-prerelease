@@ -24,8 +24,6 @@ Example:
 """
 
 import os
-import pickle
-import time
 
 import horovod.tensorflow as hvd
 import math
@@ -36,7 +34,7 @@ from PIL import Image
 from dllogger import tags
 from dllogger.logger import LOGGER
 from utils.cmd_util import PARSER, _cmd_params
-from utils.data_loader import Dataset
+from utils.data_loader import Sentinel3Dataset
 from utils.hooks.profiling_hook import ProfilingHook
 from utils.hooks.training_hook import TrainingHook
 from utils.model_fn import unet_fn
@@ -62,7 +60,7 @@ def main(_):
 
     os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
 
-    os.environ['TF_USE_CUDNN_BATCHNORM_SPATIAL_PERSISTENT'] = 'data'
+    os.environ['TF_USE_CUDNN_BATCHNORM_SPATIAL_PERSISTENT'] = '1'
 
     os.environ['TF_ADJUST_HUE_FUSED'] = 'data'
     os.environ['TF_ADJUST_SATURATION_FUSED'] = 'data'
@@ -74,6 +72,7 @@ def main(_):
     if params['use_amp']:
         os.environ['TF_ENABLE_AUTO_MIXED_PRECISION']='1'
 
+    tf.logging.set_verbosity(tf.logging.INFO)
     hvd.init()
 
     # Build run config
@@ -99,7 +98,7 @@ def main(_):
         config=run_config,
         params=params)
 
-    dataset = Dataset(data_dir=params['data_dir'],
+    dataset = Sentinel3Dataset(data_dir=params['data_dir'],
                       batch_size=params['batch_size'],
                       augment=params['augment'],
                       gpu_id=hvd.rank(),
@@ -136,18 +135,27 @@ def main(_):
 
             LOGGER.log('Begin Predict...')
             LOGGER.log(tags.RUN_START)
-
+            count = math.ceil(predict_steps/dataset.test_size)
+            LOGGER.log('Predicting for {} steps'.format(count))
             predictions = estimator.predict(
-                input_fn=lambda: dataset.test_fn(count=math.ceil(predict_steps/dataset.test_size)),
+                input_fn=lambda: dataset.test_fn(count),
                 hooks=hooks)
+
+
+            output_dir = os.path.join(params['model_dir'], 'pred')
+            import pickle
+            for i, p in enumerate(predictions):
+                with open(output_dir + '/out_{}.pkl'.format(i), 'wb') as f:
+                    pickle.dump(p, f)
 
             binary_masks = [np.argmax(p['logits'], axis=-1).astype(np.uint8) * 255 for p in predictions]
             LOGGER.log(tags.RUN_STOP)
 
-            multipage_tif = [Image.fromarray(mask).resize(size=(512, 512), resample=Image.BILINEAR)
+
+
+            multipage_tif = [Image.fromarray(mask)#.resize(size=(256, 256), resample=Image.BILINEAR)
                              for mask in binary_masks]
 
-            output_dir = os.path.join(params['model_dir'], 'pred')
 
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)

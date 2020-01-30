@@ -14,7 +14,7 @@
 
 import tensorflow as tf
 
-from dllogger import LOGGER, tags
+from dllogger import LOGGER
 
 
 class TrainingHook(tf.train.SessionRunHook):

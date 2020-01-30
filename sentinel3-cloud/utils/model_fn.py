@@ -1,4 +1,4 @@
-# Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+#z Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ import os
 import tensorflow as tf
 import horovod.tensorflow as hvd
 
-from dllogger.logger import LOGGER
 
 from model.unet import unet_v1
 
@@ -127,6 +126,12 @@ def unet_fn(features, labels, mode, params):
 
         total_loss = tf.add(crossentropy_loss, dice_loss, name="total_loss_ref")
 
+        accuracy, acc_op = tf.metrics.accuracy(tf.argmax(flat_labels, axis=-1), tf.argmax(flat_logits, axis=-1), name='accuracy_ref')
+        tp, tp_op = tf.metrics.true_positives(tf.argmax(flat_labels, axis=-1), tf.argmax(flat_logits, axis=-1))
+        fp, fp_op = tf.metrics.false_positives(tf.argmax(flat_labels, axis=-1), tf.argmax(flat_logits, axis=-1))
+        tn, tn_op = tf.metrics.true_negatives(tf.argmax(flat_labels, axis=-1), tf.argmax(flat_logits, axis=-1))
+        fn, fn_op = tf.metrics.false_negatives(tf.argmax(flat_labels, axis=-1), tf.argmax(flat_logits, axis=-1))
+
         opt = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=momentum)
 
         if is_using_hvd():
@@ -139,7 +144,10 @@ def unet_fn(features, labels, mode, params):
                 if deterministic
                 else tf.train.Optimizer.GATE_NONE)
 
-            train_op = opt.minimize(total_loss, gate_gradients=gate_gradients, global_step=global_step)
+            train_op = opt.minimize(crossentropy_loss, gate_gradients=gate_gradients, global_step=global_step)
 
-    return tf.estimator.EstimatorSpec(mode, loss=total_loss, train_op=train_op,
-                                      eval_metric_ops={})
+    logging_hook = tf.train.LoggingTensorHook({"loss" : crossentropy_loss,
+        'accuracy': acc_op, 'TP': tp_op, 'TN': tn_op, 'FP': fp_op, 'FN': fn_op}, every_n_iter=10)
+
+    return tf.estimator.EstimatorSpec(mode, loss=crossentropy_loss, train_op=train_op, training_hooks=[logging_hook],
+            eval_metric_ops={})

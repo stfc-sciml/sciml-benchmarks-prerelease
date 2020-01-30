@@ -36,7 +36,7 @@ def _crop_and_concat(inputs, residual_input):
     return tf.concat([inputs, tf.image.central_crop(residual_input, factor)], axis=-1)
 
 
-def downsample_block(inputs, filters, idx):
+def downsample_block(inputs, filters, idx, mode):
     """ UNet downsample block
 
     Perform 2 unpadded convolutions with a specified number of filters and downsample
@@ -56,16 +56,22 @@ def downsample_block(inputs, filters, idx):
     with tf.name_scope('downsample_block_{}'.format(idx)):
         out = tf.layers.conv2d(inputs=out,
                                filters=filters,
+                               padding='same',
+                               kernel_initializer='he_normal',
                                kernel_size=(3, 3),
                                activation=tf.nn.relu)
         out = tf.layers.conv2d(inputs=out,
                                filters=filters,
+                               padding='same',
+                               kernel_initializer='he_normal',
                                kernel_size=(3, 3),
                                activation=tf.nn.relu)
+        training = (mode == tf.estimator.ModeKeys.TRAIN)
+        out = tf.layers.batch_normalization(out, training=training)
         return tf.layers.max_pooling2d(inputs=out, pool_size=(2, 2), strides=2), out
 
 
-def upsample_block(inputs, residual_input, filters, idx):
+def upsample_block(inputs, residual_input, filters, idx, mode):
     """ UNet upsample block
 
     Perform 2 unpadded convolutions with a specified number of filters and upsample
@@ -84,12 +90,18 @@ def upsample_block(inputs, residual_input, filters, idx):
     with tf.name_scope('upsample_block_{}'.format(idx)):
         out = tf.layers.conv2d(inputs=out,
                                filters=filters,
+                               padding='same',
+                               kernel_initializer='he_normal',
                                kernel_size=(3, 3),
                                activation=tf.nn.relu)
         out = tf.layers.conv2d(inputs=out,
                                filters=int(filters),
+                               padding='same',
+                               kernel_initializer='he_normal',
                                kernel_size=(3, 3),
                                activation=tf.nn.relu)
+        training = (mode == tf.estimator.ModeKeys.TRAIN)
+        out = tf.layers.batch_normalization(out, training=training)
         return tf.layers.conv2d_transpose(inputs=out,
                                           filters=int(filters),
                                           kernel_size=(3, 3),
@@ -117,26 +129,32 @@ def bottleneck(inputs, filters, mode):
     with tf.name_scope('bottleneck'):
         out = tf.layers.conv2d(inputs=out,
                                filters=filters,
+                               padding='same',
+                               kernel_initializer='he_normal',
                                kernel_size=(3, 3),
                                activation=tf.nn.relu)
         out = tf.layers.conv2d(inputs=out,
                                filters=filters,
+                               padding='same',
+                               kernel_initializer='he_normal',
                                kernel_size=(3, 3),
                                activation=tf.nn.relu)
 
         training = (mode == tf.estimator.ModeKeys.TRAIN)
+        out = tf.layers.batch_normalization(out, training=training)
 
-        out = tf.layers.dropout(out, rate=0.5, training=training)
+        # out = tf.layers.dropout(out, rate=0.5, training=training)
 
         return tf.layers.conv2d_transpose(inputs=out,
                                           filters=filters,
                                           kernel_size=(3, 3),
                                           strides=(2, 2),
+                                          kernel_initializer='he_normal',
                                           padding='same',
                                           activation=tf.nn.relu)
 
 
-def output_block(inputs, residual_input, filters, n_classes):
+def output_block(inputs, residual_input, filters, n_classes, mode):
     """ UNet output
 
     Perform 3 unpadded convolutions, the last one with the same number
@@ -158,20 +176,27 @@ def output_block(inputs, residual_input, filters, n_classes):
     with tf.name_scope('output'):
         out = tf.layers.conv2d(inputs=out,
                                filters=filters,
+                               padding='same',
+                               kernel_initializer='he_normal',
                                kernel_size=(3, 3),
                                activation=tf.nn.relu)
         out = tf.layers.conv2d(inputs=out,
                                filters=filters,
+                               padding='same',
+                               kernel_initializer='he_normal',
                                kernel_size=(3, 3),
                                activation=tf.nn.relu)
-
+        training = (mode == tf.estimator.ModeKeys.TRAIN)
+        out = tf.layers.batch_normalization(out, training=training)
         return tf.layers.conv2d(inputs=out,
                                 filters=n_classes,
+                                padding='same',
+                                kernel_initializer='he_normal',
                                 kernel_size=(1, 1),
                                 activation=tf.nn.relu)
 
 
-def input_block(inputs, filters):
+def input_block(inputs, filters, mode):
     """ UNet input block
 
     Perform 2 unpadded convolutions with a specified number of filters and downsample
@@ -191,10 +216,16 @@ def input_block(inputs, filters):
     with tf.name_scope('input'):
         out = tf.layers.conv2d(inputs=out,
                                filters=filters,
+                               padding='same',
+                               kernel_initializer='he_normal',
                                kernel_size=(3, 3),
                                activation=tf.nn.relu)
         out = tf.layers.conv2d(inputs=out,
                                filters=filters,
+                               padding='same',
+                               kernel_initializer='he_normal',
                                kernel_size=(3, 3),
                                activation=tf.nn.relu)
+        training = (mode == tf.estimator.ModeKeys.TRAIN)
+        out = tf.layers.batch_normalization(out, training=training)
         return tf.layers.max_pooling2d(inputs=out, pool_size=(2, 2), strides=2), out
