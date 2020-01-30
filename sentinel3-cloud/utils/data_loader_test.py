@@ -30,6 +30,19 @@ def test_load_image():
     output = output[0]
     assert output[0].shape == tf.TensorShape((2, 256, 256, 9))
 
+@pytest.mark.benchmark
+def test_sentinel3_dataset_load_single_batch(benchmark):
+    path = list((Path().home() / "git/ml-cloud/data/pixbox-2").glob('S3A*'))[0]
+    s3d = Sentinel3Dataset(path, batch_size=20)
+    dataset = s3d.train_fn()
+    dataset = dataset.take(1)
+
+    def iterate_dataset():
+        for d in dataset:
+            pass
+
+    benchmark(iterate_dataset)
+
 
 @pytest.mark.benchmark
 def test_image_loader_to_load_bts(benchmark):
