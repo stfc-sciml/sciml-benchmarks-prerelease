@@ -14,21 +14,21 @@ def test_load_image():
     # Image shape
     _, h, w, c = dataset.output_shapes[0]
 
-    assert h == 64
-    assert w == 64
+    assert h == 256
+    assert w == 256
     assert c == 9
 
     # Mask shape
     _, h, w, c = dataset.output_shapes[1]
 
-    assert h == 64
-    assert w == 64
+    assert h == 256
+    assert w == 256
     assert c == 2
 
     output = list(dataset)
     assert len(output) == 1
     output = output[0]
-    assert output[0].shape == tf.TensorShape((2, 64, 64, 9))
+    assert output[0].shape == tf.TensorShape((2, 256, 256, 9))
 
 
 @pytest.mark.benchmark

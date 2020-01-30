@@ -268,7 +268,6 @@ class Sentinel3Dataset():
         msk[..., 0] = mask
         msk[..., 1] = 1-mask
 
-
         yield (channels, msk)
 
     def _generator(self, path):
@@ -285,14 +284,14 @@ class Sentinel3Dataset():
         img = tf.expand_dims(img, axis=0)
         msk = tf.expand_dims(msk, axis=0)
 
-        img = tf.extract_image_patches(img, [1, 64, 64, 1], [1, 64, 64, 1], [
+        img = tf.extract_image_patches(img, [1, 256, 256, 1], [1, 256, 256, 1], [
                                        1, 1, 1, 1], padding='VALID')
-        msk = tf.extract_image_patches(msk, [1, 64, 64, 1], [1, 64, 64, 1], [
+        msk = tf.extract_image_patches(msk, [1, 256, 256, 1], [1, 256, 256, 1], [
                                        1, 1, 1, 1], padding='VALID')
 
         n, nx, ny, np = img.shape
-        img = tf.reshape(img, (n*nx*ny, 64, 64, 9))
-        msk = tf.reshape(msk, (n*nx*ny, 64, 64, 2))
+        img = tf.reshape(img, (n*nx*ny, 256, 256, 9))
+        msk = tf.reshape(msk, (n*nx*ny, 256, 256, 2))
 
         return img, msk
 
@@ -300,15 +299,16 @@ class Sentinel3Dataset():
         """Input function for training"""
         dataset = tf.data.Dataset.from_tensor_slices(self._train_images)
         dataset = dataset.shuffle(1000)
-        dataset = dataset.repeat()
         dataset = dataset.shard(self._num_gpus, self._gpu_id)
         dataset = dataset.apply(tf.contrib.data.parallel_interleave(
-            self._generator, cycle_length=1))
+            self._generator, cycle_length=2))
         dataset = dataset.map(self._transform)
         dataset = dataset.apply(tf.data.experimental.unbatch())
         dataset = dataset.shuffle(self._batch_size * 3)
         dataset = dataset.batch(self._batch_size)
-        dataset = dataset.prefetch(self._batch_size)
+        dataset = dataset.prefetch(self._batch_size*10)
+        dataset = dataset.cache()
+        dataset = dataset.repeat()
 
         return dataset
 
@@ -317,7 +317,7 @@ class Sentinel3Dataset():
         dataset = dataset.repeat()
         dataset = dataset.shard(self._num_gpus, self._gpu_id)
         dataset = dataset.apply(tf.contrib.data.parallel_interleave(
-            self._generator, cycle_length=1))
+            self._generator, cycle_length=2))
         dataset = dataset.map(self._transform)
         dataset = dataset.apply(tf.data.experimental.unbatch())
         dataset = dataset.batch(self._batch_size)

@@ -21,8 +21,8 @@
      --warmup_steps 200 \
      --log_every 10 \
      --max_steps 1000 \
-     --batch_size 256 \
-     --learning_rate 0.01 \
+     --batch_size 20 \
+     --learning_rate 0.001 \
      --momentum 0.01 \
      --benchmark \
      --exec_mode train_and_predict \
