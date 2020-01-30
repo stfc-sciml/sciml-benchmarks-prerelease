@@ -223,7 +223,6 @@ class Sentinel3Dataset():
         self._seed = seed
 
 
-
     @property
     def train_size(self):
         return len(self._train_images)
@@ -236,49 +235,39 @@ class Sentinel3Dataset():
         path = path.decode()
 
         loader = ImageLoader(path)
-        refs = loader.load_reflectance()
+        rads = loader.load_radiances()
         bts = loader.load_bts()
         flags = loader.load_flags()
         bts = bts.to_array().values
         mask = flags.summary_cloud.values
         mask[mask > 0] = 1
 
-
-        refs = tf.image.resize_image_with_crop_or_pad(refs, 1000, 1300)
-        refs = tf.image.resize_image_with_crop_or_pad(refs, 1000, 1300)
-        bts = tf.image.resize_image_with_crop_or_pad(bts, 1000, 1300)
-        mask = np.expand_dims(mask, axis=-1)
-        mask = tf.image.resize_image_with_crop_or_pad(mask, 1000, 1300)
-
-
         bts = np.nan_to_num(bts, nan=bts[~np.isnan(bts)].min())
         # Mean - Std norm
         bts = (bts - 270.0) / 22.0
-        # bts = transform.resize(bts, (1200, 1500, 3))
+        bts = transform.resize(bts, (1200, 1500, 3))
 
-        refs = refs.to_array().values
-        refs = np.nan_to_num(refs, nan=refs[~np.isnan(refs)].min())
+        rads = rads.to_array().values
+        rads = np.nan_to_num(rads, nan=rads[~np.isnan(rads)].min())
         # Mean - Std norm, already in range 0-1, convert to (-1, 1) range.
-        refs = refs - 0.5
-        refs = np.transpose(refs, [1, 2, 0])
-        # refs = transform.resize(refs, (1200, 1500, 6))
+        rads = rads - 0.5
+        rads = np.transpose(rads, [1, 2, 0])
+        rads = transform.resize(rads, (1200, 1500, 6))
 
-        # channels = np.concatenate([refs, bts], axis=-1)
-        # channels = channels[100:-100, 100:-100]
+        channels = np.concatenate([rads, bts], axis=-1)
+        channels = channels[100:-100, 100:-100]
 
         mask = mask.astype(np.float32)
         mask = np.nan_to_num(mask)
-        # mask = transform.resize(
-        #     mask, (1200, 1500), order=0, anti_aliasing=False)
-        # msk = msk[100:-100, 100:-100]
+        mask = transform.resize(
+            mask, (1200, 1500), order=0, anti_aliasing=False)
+        mask = mask[100:-100, 100:-100]
 
 
         msk = np.zeros((1000, 1300, 2))
-        msk[..., 0] = mask[..., 0]
-        msk[..., 1] = 1-mask[..., 0]
+        msk[..., 0] = mask
+        msk[..., 1] = 1-mask
 
-
-        channels = np.concatenate([refs, bts], axis=-1)
 
         yield (channels, msk)
 

@@ -4,3 +4,5 @@ pandas
 h5netcdf
 xarray
 scikit-image
+pytest
+pytest-benchmark
