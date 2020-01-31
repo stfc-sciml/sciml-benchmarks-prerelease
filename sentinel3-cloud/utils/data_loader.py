@@ -14,7 +14,7 @@
 
 """ Dataset class encapsulates the data loading"""
 import os
-from glob import glob
+from pathlib import Path
 
 import tensorflow as tf
 import numpy as np
@@ -30,8 +30,11 @@ class Sentinel3Dataset():
         self._data_dir = data_dir
         self._batch_size = batch_size
 
-        self._train_images = glob(os.path.join(self._data_dir, 'S3A*'))
-        self._test_images = glob(os.path.join(self._data_dir, 'S3A*'))[:10]
+        self._train_images = Path(self._data_dir).joinpath('train').glob('S3A*')
+        self._train_images = list(map(str, self._train_images))
+
+        self._test_images = Path(self._data_dir).joinpath('test').glob('S3A*')
+        self._test_images = list(map(str, self._test_images))
 
         self._num_gpus = num_gpus
         self._gpu_id = gpu_id
@@ -55,15 +58,17 @@ class Sentinel3Dataset():
         flags = loader.load_flags()
         bts = bts.to_array().values
         mask = flags.bayes_in.values
-        mask[mask > 0] = 1
 
         bts = np.nan_to_num(bts, nan=bts[~np.isnan(bts)].min())
         # Mean - Std norm
         bts = (bts - 270.0) / 22.0
+        bts = np.transpose(bts, [1, 2, 0])
         bts = transform.resize(bts, (1200, 1500, 3))
 
         rads = rads.to_array().values
-        rads = np.nan_to_num(rads, nan=rads[~np.isnan(rads)].min())
+
+        fill_value = 0 if np.all(np.isnan(rads)) else np.nanmin(rads)
+        rads = np.nan_to_num(rads, nan=fill_value)
         # Mean - Std norm, already in range 0-1, convert to (-1, 1) range.
         rads = rads - 0.5
         rads = np.transpose(rads, [1, 2, 0])
@@ -72,6 +77,7 @@ class Sentinel3Dataset():
         channels = np.concatenate([rads, bts], axis=-1)
         channels = channels[100:-100, 100:-100]
 
+        mask[mask > 0] = 1
         mask = mask.astype(np.float32)
         mask = np.nan_to_num(mask)
         mask = transform.resize(
@@ -121,7 +127,7 @@ class Sentinel3Dataset():
         dataset = dataset.apply(tf.data.experimental.unbatch())
         dataset = dataset.shuffle(self._batch_size * 3)
         dataset = dataset.batch(self._batch_size)
-        dataset = dataset.prefetch(self._batch_size*10)
+        dataset = dataset.prefetch(self._batch_size)
         dataset = dataset.cache()
         dataset = dataset.repeat()
         return dataset

@@ -27,9 +27,7 @@ import os
 
 import horovod.tensorflow as hvd
 import math
-import numpy as np
 import tensorflow as tf
-from PIL import Image
 
 from dllogger import tags
 from dllogger.logger import LOGGER
@@ -143,27 +141,6 @@ def main(_):
 
 
             output_dir = os.path.join(params['model_dir'], 'pred')
-            import pickle
-            for i, p in enumerate(predictions):
-                with open(output_dir + '/out_{}.pkl'.format(i), 'wb') as f:
-                    pickle.dump(p, f)
-
-            binary_masks = [np.argmax(p['logits'], axis=-1).astype(np.uint8) * 255 for p in predictions]
-            LOGGER.log(tags.RUN_STOP)
-
-
-
-            multipage_tif = [Image.fromarray(mask)#.resize(size=(256, 256), resample=Image.BILINEAR)
-                             for mask in binary_masks]
-
-
-            if not os.path.exists(output_dir):
-                os.makedirs(output_dir)
-
-            multipage_tif[0].save(os.path.join(output_dir, 'test-masks.tif'),
-                                  compression="tiff_deflate",
-                                  save_all=True,
-                                  append_images=multipage_tif[1:])
 
             LOGGER.log("Predict finished")
             LOGGER.log("Results available in: {}".format(output_dir))
