@@ -132,27 +132,27 @@ class Sentinel3Dataset():
         dataset = dataset.repeat()
         return dataset
 
-    def test_fn(self, count):
+    def test_fn(self, count=-1):
         dataset = tf.data.Dataset.from_tensor_slices(self._test_images)
-        dataset = dataset.repeat()
+        dataset = dataset.shuffle(1000)
         dataset = dataset.shard(self._num_gpus, self._gpu_id)
         dataset = dataset.apply(tf.contrib.data.parallel_interleave(
             self._generator, cycle_length=2))
         dataset = dataset.map(self._transform)
         dataset = dataset.apply(tf.data.experimental.unbatch())
+        dataset = dataset.shuffle(self._batch_size * 3)
+        dataset = dataset.map(lambda x, y: x)
         dataset = dataset.batch(self._batch_size)
+        dataset = dataset.prefetch(self._batch_size)
+        dataset = dataset.repeat()
         dataset = dataset.take(count)
         return dataset
 
     def synth_fn(self):
-        inputs = tf.truncated_normal((256, 256, 1), dtype=tf.float32, mean=127.5, stddev=1, seed=self._seed,
+        inputs = tf.truncated_normal((100, 256, 256, 9), dtype=tf.float32, mean=127.5, stddev=1, seed=self._seed,
                                      name='synth_inputs')
-        masks = tf.truncated_normal((256, 256, 2), dtype=tf.float32, mean=0.01, stddev=0.1, seed=self._seed,
-                                    name='synth_masks')
-        dataset = tf.data.Dataset.from_tensors((inputs, masks))
+        dataset = tf.data.Dataset.from_tensors(inputs)
         dataset = dataset.shard(self._num_gpus, self._gpu_id)
-        dataset = dataset.shuffle(self._batch_size * 5)
-        dataset = dataset.repeat()
         dataset = dataset.batch(self._batch_size)
         dataset = dataset.prefetch(self._batch_size)
         return dataset

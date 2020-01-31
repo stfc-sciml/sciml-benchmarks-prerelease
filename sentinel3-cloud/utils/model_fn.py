@@ -150,4 +150,4 @@ def unet_fn(features, labels, mode, params):
         'accuracy': acc_op, 'TP': tp_op, 'TN': tn_op, 'FP': fp_op, 'FN': fn_op}, every_n_iter=10)
 
     return tf.estimator.EstimatorSpec(mode, loss=crossentropy_loss, train_op=train_op, training_hooks=[logging_hook],
-            eval_metric_ops={})
+            eval_metric_ops={}, prediction_hooks=[logging_hook])

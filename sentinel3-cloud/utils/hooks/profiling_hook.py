@@ -17,7 +17,7 @@ import time
 import tensorflow as tf
 import horovod.tensorflow as hvd
 
-from dllogger import LOGGER, tags, AverageMeter
+from dllogger import LOGGER, AverageMeter
 
 
 class ProfilingHook(tf.train.SessionRunHook):
@@ -48,7 +48,14 @@ class ProfilingHook(tf.train.SessionRunHook):
         self._current_step += 1
 
     def begin(self):
-        pass
+        self._session_begin_time = time.time()
 
     def end(self, session):
+        self._session_end_time = time.time()
         LOGGER.log('average_images_per_second', self._meter.get_value())
+
+    def get_results(self):
+        return {
+                'avg_images_per_sec': self._meter.get_value(),
+                'total_duration': self._session_end_time - self._session_begin_time
+                }

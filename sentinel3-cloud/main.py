@@ -24,11 +24,11 @@ Example:
 """
 
 import os
-
+import json
 import horovod.tensorflow as hvd
-import math
 import tensorflow as tf
 
+from pathlib import Path
 from dllogger import tags
 from dllogger.logger import LOGGER
 from utils.cmd_util import PARSER, _cmd_params
@@ -103,14 +103,16 @@ def main(_):
                       num_gpus=hvd.size(),
                       seed=params['seed'])
 
+    benchmark_results = {}
+
     if 'train' in params['exec_mode']:
         hooks = [hvd.BroadcastGlobalVariablesHook(0),
                  TrainingHook(params['log_every'])]
 
-        if params['benchmark']:
-            hooks.append(ProfilingHook(params['batch_size'],
-                                       params['log_every'],
-                                       params['warmup_steps']))
+        train_profiler_hook = ProfilingHook(params['batch_size'],
+                                   params['log_every'],
+                                   params['warmup_steps'])
+        hooks.append(train_profiler_hook)
 
         LOGGER.log('Begin Training...')
 
@@ -121,29 +123,35 @@ def main(_):
             hooks=hooks)
         LOGGER.log(tags.RUN_STOP)
 
+        benchmark_results['train'] = train_profiler_hook.get_results()
+
     if 'predict' in params['exec_mode']:
         if hvd.rank() == 0:
+            test_profiler_hook = ProfilingHook(params['batch_size'],
+                                   params['log_every'],
+                                  0)
+            hooks = [test_profiler_hook]
+
             predict_steps = dataset.test_size
-            hooks = None
-            if params['benchmark']:
-                hooks = [ProfilingHook(params['batch_size'],
-                                       params['log_every'],
-                                       params['warmup_steps'])]
-                predict_steps = params['warmup_steps'] * 2 * params['batch_size']
 
             LOGGER.log('Begin Predict...')
             LOGGER.log(tags.RUN_START)
-            count = math.ceil(predict_steps/dataset.test_size)
-            LOGGER.log('Predicting for {} steps'.format(count))
-            predictions = estimator.predict(
-                input_fn=lambda: dataset.test_fn(count),
-                hooks=hooks)
+            LOGGER.log('Predicting for {} steps'.format(predict_steps))
 
+            gen = estimator.predict(input_fn=lambda:
+                    dataset.test_fn(predict_steps), hooks=hooks)
 
-            output_dir = os.path.join(params['model_dir'], 'pred')
+            # Call the generator actually make the predictions
+            for result in gen:
+                pass
 
             LOGGER.log("Predict finished")
-            LOGGER.log("Results available in: {}".format(output_dir))
+
+            benchmark_results['test'] = test_profiler_hook.get_results()
+
+    results_file = Path(params['model_dir']).joinpath('results.json')
+    with results_file.open('w') as handle:
+        json.dump(benchmark_results, handle)
 
 
 if __name__ == '__main__':
