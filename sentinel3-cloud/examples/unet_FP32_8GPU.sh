@@ -16,8 +16,9 @@
 # Usage ./unet_TRAIN_BENCHMARK_FP32_1GPU.sh <path to this repository> <path to dataset> <path to results directory> <batch size>
 
 mpirun \
-    -np 8 \
-    -H localhost:8 \
+    --oversubscribe \
+    -np $NGPUS \
+    -H localhost:$NGPUS \
     -bind-to none \
     -map-by slot \
     -x NCCL_DEBUG=INFO \
@@ -28,10 +29,11 @@ mpirun \
      python $1/main.py \
      --data_dir $2 \
      --model_dir $3 \
-     --warmup_steps 200 \
+     --warmup_steps 300 \
      --log_every 100 \
-     --max_steps 40000 \
-     --batch_size 2 \
+     --max_steps 2000 \
+     --batch_size 5 \
+     --learning_rate 0.001 \
+     --momentum 0.01 \
      --benchmark \
      --exec_mode train_and_predict \
-     --augment

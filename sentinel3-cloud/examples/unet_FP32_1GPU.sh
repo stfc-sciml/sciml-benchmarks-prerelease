@@ -18,9 +18,9 @@
  python $1/main.py \
      --data_dir $2 \
      --model_dir $3 \
-     --warmup_steps 3000 \
+     --warmup_steps 300 \
      --log_every 100 \
-     --max_steps 8700 \
+     --max_steps 2000 \
      --batch_size 20 \
      --learning_rate 0.001 \
      --momentum 0.01 \

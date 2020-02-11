@@ -115,6 +115,7 @@ def main(_):
         hooks.append(train_profiler_hook)
 
         LOGGER.log('Begin Training...')
+        LOGGER.log('Training for {} steps'.format(params['max_steps']))
 
         LOGGER.log(tags.RUN_START)
         estimator.train(
@@ -132,7 +133,7 @@ def main(_):
                                   0)
             hooks = [test_profiler_hook]
 
-            predict_steps = dataset.test_size
+            predict_steps = params['warmup_steps'] + dataset.test_size
 
             LOGGER.log('Begin Predict...')
             LOGGER.log(tags.RUN_START)
