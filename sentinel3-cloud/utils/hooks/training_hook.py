@@ -17,7 +17,7 @@ import tensorflow as tf
 from dllogger import LOGGER
 
 
-class TrainingHook(tf.train.SessionRunHook):
+class TrainingHook(tf.estimator.SessionRunHook):
 
     def __init__(self, log_every=1):
         self._log_every = log_every

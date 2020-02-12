@@ -30,8 +30,6 @@ Example:
 """
 import os
 import tensorflow as tf
-import horovod.tensorflow as hvd
-
 
 from model.unet import unet_v1
 
@@ -133,9 +131,6 @@ def unet_fn(features, labels, mode, params):
         fn, fn_op = tf.metrics.false_negatives(tf.argmax(flat_labels, axis=-1), tf.argmax(flat_logits, axis=-1))
 
         opt = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=momentum)
-
-        if is_using_hvd():
-            opt = hvd.DistributedOptimizer(opt, device_dense='/gpu:0')
 
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
             deterministic = True

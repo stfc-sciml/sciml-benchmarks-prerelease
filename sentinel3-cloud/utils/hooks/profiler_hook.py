@@ -16,7 +16,6 @@ import os
 import time
 
 import tensorflow as tf
-import horovod.tensorflow as hvd
 
 from dllogger.autologging import log_hardware
 from dllogger.logger import LOGGER
@@ -24,9 +23,11 @@ import dllogger.logger as dllg
 from dllogger import tags
 
 
-class ProfilerHook(tf.train.SessionRunHook):
+class ProfilerHook(tf.estimator.SessionRunHook):
 
-    def __init__(self, out_dir, global_batch_size, log_every=10, warmup_steps=20):
+    def __init__(self, out_dir, global_batch_size, log_every=10, warmup_steps=20, num_replicas=1):
+        self.num_replicas = num_replicas
+
         LOGGER.set_model_name('UNet_TF')
         LOGGER.set_backends([
             dllg.JsonBackend(log_file=os.path.join(out_dir, 'dlloger_out.json'),
@@ -66,7 +67,7 @@ class ProfilerHook(tf.train.SessionRunHook):
 
         batch_time = time.time() - self._t0
         ips = self._global_batch_size / batch_time
-        ips *= hvd.size()
+        ips *= self.num_replicas
 
         if self._current_step >= self._warmup_steps:
             LOGGER.log("iteration", int(self._current_step))

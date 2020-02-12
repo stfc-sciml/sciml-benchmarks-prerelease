@@ -15,18 +15,17 @@
 import time
 
 import tensorflow as tf
-import horovod.tensorflow as hvd
-
 from dllogger import LOGGER, AverageMeter
 
 
-class ProfilingHook(tf.train.SessionRunHook):
+class ProfilingHook(tf.estimator.SessionRunHook):
 
-    def __init__(self, batch_size, log_every, warmup_steps):
+    def __init__(self, batch_size, log_every, warmup_steps, num_replicas=1):
+        self._num_replicas = num_replicas
         self._log_every = log_every
         self._warmup_steps = warmup_steps
         self._current_step = 0
-        self._global_batch_size = batch_size * hvd.size()
+        self._global_batch_size = batch_size * self._num_replicas
         self._meter = AverageMeter()
         self._t0 = 0
 

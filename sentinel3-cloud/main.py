@@ -25,7 +25,6 @@ Example:
 
 import os
 import json
-import horovod.tensorflow as hvd
 import tensorflow as tf
 
 from pathlib import Path
@@ -38,7 +37,7 @@ from utils.hooks.training_hook import TrainingHook
 from utils.model_fn import unet_fn
 
 
-def main(_):
+def main():
     """
     Starting point of the application
     """
@@ -47,12 +46,8 @@ def main(_):
 
     params = _cmd_params(flags)
 
-    tf.logging.set_verbosity(tf.logging.ERROR)
-
     # Optimization flags
     os.environ['CUDA_CACHE_DISABLE'] = '0'
-
-    os.environ['HOROVOD_GPU_ALLREDUCE'] = 'NCCL'
 
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -70,17 +65,20 @@ def main(_):
     if params['use_amp']:
         os.environ['TF_ENABLE_AUTO_MIXED_PRECISION']='1'
 
-    tf.logging.set_verbosity(tf.logging.INFO)
-    hvd.init()
+    tf.autograph.set_verbosity(3)
+    strategy = tf.distribute.MirroredStrategy()
 
+    # strategy = tf.distribute.MirroredStrategy()
+    num_replicas = 1#strategy.num_replicas_in_sync
+    LOGGER.log('Number of Replicas: {}'.format(num_replicas))
+    # with strategy.scope():
     # Build run config
-    gpu_options = tf.GPUOptions()
+    gpu_options = tf.compat.v1.GPUOptions()
     config = tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True)
     config.gpu_options.allow_growth = True
-    config.gpu_options.visible_device_list = str(hvd.local_rank())
     config.gpu_options.force_gpu_compatible = True
     config.intra_op_parallelism_threads = 1
-    config.inter_op_parallelism_threads = max(2, 40 // hvd.size() - 2)
+    config.inter_op_parallelism_threads = max(2, 40 // num_replicas - 2)
 
     run_config = tf.estimator.RunConfig(
         save_summary_steps=1,
@@ -99,19 +97,17 @@ def main(_):
     dataset = Sentinel3Dataset(data_dir=params['data_dir'],
                       batch_size=params['batch_size'],
                       augment=params['augment'],
-                      gpu_id=hvd.rank(),
-                      num_gpus=hvd.size(),
+                      num_gpus=num_replicas,
                       seed=params['seed'])
 
     benchmark_results = {}
 
     if 'train' in params['exec_mode']:
-        hooks = [hvd.BroadcastGlobalVariablesHook(0),
-                 TrainingHook(params['log_every'])]
+        hooks = [TrainingHook(params['log_every'])]
 
         train_profiler_hook = ProfilingHook(params['batch_size'],
                                    params['log_every'],
-                                   params['warmup_steps'])
+                                   params['warmup_steps'], num_replicas=num_replicas)
         hooks.append(train_profiler_hook)
 
         LOGGER.log('Begin Training...')
@@ -127,28 +123,27 @@ def main(_):
         benchmark_results['train'] = train_profiler_hook.get_results()
 
     if 'predict' in params['exec_mode']:
-        if hvd.rank() == 0:
-            test_profiler_hook = ProfilingHook(params['batch_size'],
-                                   params['log_every'],
-                                  0)
-            hooks = [test_profiler_hook]
+        test_profiler_hook = ProfilingHook(params['batch_size'],
+                               params['log_every'],
+                              0, num_replicas=num_replicas)
+        hooks = [test_profiler_hook]
 
-            predict_steps = params['warmup_steps'] + dataset.test_size
+        predict_steps = params['warmup_steps'] + dataset.test_size
 
-            LOGGER.log('Begin Predict...')
-            LOGGER.log(tags.RUN_START)
-            LOGGER.log('Predicting for {} steps'.format(predict_steps))
+        LOGGER.log('Begin Predict...')
+        LOGGER.log(tags.RUN_START)
+        LOGGER.log('Predicting for {} steps'.format(predict_steps))
 
-            gen = estimator.predict(input_fn=lambda:
-                    dataset.test_fn(predict_steps), hooks=hooks)
+        gen = estimator.predict(input_fn=lambda:
+                dataset.test_fn(predict_steps), hooks=hooks)
 
-            # Call the generator actually make the predictions
-            for result in gen:
-                pass
+        # Call the generator actually make the predictions
+        for result in gen:
+            pass
 
-            LOGGER.log("Predict finished")
+        LOGGER.log("Predict finished")
 
-            benchmark_results['test'] = test_profiler_hook.get_results()
+        benchmark_results['test'] = test_profiler_hook.get_results()
 
     results_file = Path(params['model_dir']).joinpath('results.json')
     with results_file.open('w') as handle:
@@ -156,4 +151,4 @@ def main(_):
 
 
 if __name__ == '__main__':
-    tf.app.run()
+    main()
