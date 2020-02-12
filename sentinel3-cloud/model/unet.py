@@ -18,10 +18,11 @@ This module provides a convenient way to create different topologies
 based around UNet.
 
 """
+import tensorflow as tf
 from model.layers import output_block, upsample_block, bottleneck, downsample_block, input_block
 
 
-def unet_v1(inputs, mode):
+def unet_v1(input_shape):
     """ U-Net: Convolutional Networks for Biomedical Image Segmentation
 
     Source:
@@ -29,23 +30,24 @@ def unet_v1(inputs, mode):
 
     """
 
+    inputs = tf.keras.layers.Input(input_shape)
     skip_connections = []
 
-    out, skip = input_block(inputs, filters=64, mode=mode)
+    out, skip = input_block(inputs, filters=64)
 
     skip_connections.append(skip)
 
     for idx, filters in enumerate([128, 256, 512]):
-        out, skip = downsample_block(out, filters=filters, idx=idx, mode=mode)
+        out, skip = downsample_block(out, filters=filters, idx=idx)
         skip_connections.append(skip)
 
-    out = bottleneck(out, filters=1024, mode=mode)
+    out = bottleneck(out, filters=1024)
 
     for idx, filters in enumerate([512, 256, 128]):
         out = upsample_block(out,
                              residual_input=skip_connections.pop(),
                              filters=filters,
-                             idx=idx,
-                             mode=mode)
+                             idx=idx)
 
-    return output_block(out, residual_input=skip_connections.pop(), filters=64, n_classes=2, mode=mode)
+    out = output_block(out, residual_input=skip_connections.pop(), filters=64, n_classes=2)
+    return tf.keras.Model(inputs, out)

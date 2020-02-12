@@ -32,11 +32,11 @@ def _crop_and_concat(inputs, residual_input):
 
     """
 
-    factor = inputs.shape[1].value / residual_input.shape[1].value
+    factor = inputs.shape[1] / residual_input.shape[1]
     return tf.concat([inputs, tf.image.central_crop(residual_input, factor)], axis=-1)
 
 
-def downsample_block(inputs, filters, idx, mode):
+def downsample_block(inputs, filters, idx):
     """ UNet downsample block
 
     Perform 2 unpadded convolutions with a specified number of filters and downsample
@@ -54,24 +54,23 @@ def downsample_block(inputs, filters, idx, mode):
     out = inputs
 
     with tf.name_scope('downsample_block_{}'.format(idx)):
-        out = tf.layers.conv2d(inputs=out,
+        out = tf.keras.layers.Conv2D(
                                filters=filters,
                                padding='same',
                                kernel_initializer='he_normal',
                                kernel_size=(3, 3),
-                               activation=tf.nn.relu)
-        out = tf.layers.conv2d(inputs=out,
+                               activation=tf.nn.relu)(out)
+        out = tf.keras.layers.Conv2D(
                                filters=filters,
                                padding='same',
                                kernel_initializer='he_normal',
                                kernel_size=(3, 3),
-                               activation=tf.nn.relu)
-        training = (mode == tf.estimator.ModeKeys.TRAIN)
-        out = tf.layers.batch_normalization(out, training=training)
-        return tf.layers.max_pooling2d(inputs=out, pool_size=(2, 2), strides=2), out
+                               activation=tf.nn.relu)(out)
+        out = tf.keras.layers.BatchNormalization()(out)
+        return tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2)(out), out
 
 
-def upsample_block(inputs, residual_input, filters, idx, mode):
+def upsample_block(inputs, residual_input, filters, idx):
     """ UNet upsample block
 
     Perform 2 unpadded convolutions with a specified number of filters and upsample
@@ -88,29 +87,28 @@ def upsample_block(inputs, residual_input, filters, idx, mode):
     out = _crop_and_concat(inputs, residual_input)
 
     with tf.name_scope('upsample_block_{}'.format(idx)):
-        out = tf.layers.conv2d(inputs=out,
+        out = tf.keras.layers.Conv2D(
                                filters=filters,
                                padding='same',
                                kernel_initializer='he_normal',
                                kernel_size=(3, 3),
-                               activation=tf.nn.relu)
-        out = tf.layers.conv2d(inputs=out,
+                               activation=tf.nn.relu)(out)
+        out = tf.keras.layers.Conv2D(
                                filters=int(filters),
                                padding='same',
                                kernel_initializer='he_normal',
                                kernel_size=(3, 3),
-                               activation=tf.nn.relu)
-        training = (mode == tf.estimator.ModeKeys.TRAIN)
-        out = tf.layers.batch_normalization(out, training=training)
-        return tf.layers.conv2d_transpose(inputs=out,
+                               activation=tf.nn.relu)(out)
+        out = tf.keras.layers.BatchNormalization()(out)
+        return tf.keras.layers.Conv2DTranspose(
                                           filters=int(filters),
                                           kernel_size=(3, 3),
                                           strides=(2, 2),
                                           padding='same',
-                                          activation=tf.nn.relu)
+                                          activation=tf.nn.relu)(out)
 
 
-def bottleneck(inputs, filters, mode):
+def bottleneck(inputs, filters):
     """ UNet central block
 
     Perform 2 unpadded convolutions with a specified number of filters and upsample
@@ -127,34 +125,30 @@ def bottleneck(inputs, filters, mode):
     out = inputs
 
     with tf.name_scope('bottleneck'):
-        out = tf.layers.conv2d(inputs=out,
+        out = tf.keras.layers.Conv2D(
                                filters=filters,
                                padding='same',
                                kernel_initializer='he_normal',
                                kernel_size=(3, 3),
-                               activation=tf.nn.relu)
-        out = tf.layers.conv2d(inputs=out,
+                               activation=tf.nn.relu)(out)
+        out = tf.keras.layers.Conv2D(
                                filters=filters,
                                padding='same',
                                kernel_initializer='he_normal',
                                kernel_size=(3, 3),
-                               activation=tf.nn.relu)
+                               activation=tf.nn.relu)(out)
 
-        training = (mode == tf.estimator.ModeKeys.TRAIN)
-        out = tf.layers.batch_normalization(out, training=training)
-
-        # out = tf.layers.dropout(out, rate=0.5, training=training)
-
-        return tf.layers.conv2d_transpose(inputs=out,
+        out = tf.keras.layers.BatchNormalization()(out)
+        return tf.keras.layers.Conv2DTranspose(
                                           filters=filters,
                                           kernel_size=(3, 3),
                                           strides=(2, 2),
                                           kernel_initializer='he_normal',
                                           padding='same',
-                                          activation=tf.nn.relu)
+                                          activation=tf.nn.relu)(out)
 
 
-def output_block(inputs, residual_input, filters, n_classes, mode):
+def output_block(inputs, residual_input, filters, n_classes):
     """ UNet output
 
     Perform 3 unpadded convolutions, the last one with the same number
@@ -174,29 +168,28 @@ def output_block(inputs, residual_input, filters, n_classes, mode):
     out = _crop_and_concat(inputs, residual_input)
 
     with tf.name_scope('output'):
-        out = tf.layers.conv2d(inputs=out,
+        out = tf.keras.layers.Conv2D(
                                filters=filters,
                                padding='same',
                                kernel_initializer='he_normal',
                                kernel_size=(3, 3),
-                               activation=tf.nn.relu)
-        out = tf.layers.conv2d(inputs=out,
+                               activation=tf.nn.relu)(out)
+        out = tf.keras.layers.Conv2D(
                                filters=filters,
                                padding='same',
                                kernel_initializer='he_normal',
                                kernel_size=(3, 3),
-                               activation=tf.nn.relu)
-        training = (mode == tf.estimator.ModeKeys.TRAIN)
-        out = tf.layers.batch_normalization(out, training=training)
-        return tf.layers.conv2d(inputs=out,
+                               activation=tf.nn.relu)(out)
+        out = tf.keras.layers.BatchNormalization()(out)
+        return tf.keras.layers.Conv2D(
                                 filters=n_classes,
                                 padding='same',
                                 kernel_initializer='he_normal',
                                 kernel_size=(1, 1),
-                                activation=tf.nn.relu)
+                                activation=tf.nn.relu)(out)
 
 
-def input_block(inputs, filters, mode):
+def input_block(inputs, filters):
     """ UNet input block
 
     Perform 2 unpadded convolutions with a specified number of filters and downsample
@@ -214,18 +207,17 @@ def input_block(inputs, filters, mode):
     out = inputs
 
     with tf.name_scope('input'):
-        out = tf.layers.conv2d(inputs=out,
+        out = tf.keras.layers.Conv2D(
                                filters=filters,
                                padding='same',
                                kernel_initializer='he_normal',
                                kernel_size=(3, 3),
-                               activation=tf.nn.relu)
-        out = tf.layers.conv2d(inputs=out,
+                               activation=tf.nn.relu)(out)
+        out = tf.keras.layers.Conv2D(
                                filters=filters,
                                padding='same',
                                kernel_initializer='he_normal',
                                kernel_size=(3, 3),
-                               activation=tf.nn.relu)
-        training = (mode == tf.estimator.ModeKeys.TRAIN)
-        out = tf.layers.batch_normalization(out, training=training)
-        return tf.layers.max_pooling2d(inputs=out, pool_size=(2, 2), strides=2), out
+                               activation=tf.nn.relu)(out)
+        out = tf.keras.layers.BatchNormalization()(out)
+        return tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2)(out), out

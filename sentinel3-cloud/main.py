@@ -30,11 +30,11 @@ import tensorflow as tf
 from pathlib import Path
 from dllogger import tags
 from dllogger.logger import LOGGER
+from model.unet import unet_v1
 from utils.cmd_util import PARSER, _cmd_params
 from utils.data_loader import Sentinel3Dataset
 from utils.hooks.profiling_hook import ProfilingHook
 from utils.hooks.training_hook import TrainingHook
-from utils.model_fn import unet_fn
 
 
 def main():
@@ -67,87 +67,70 @@ def main():
 
     tf.autograph.set_verbosity(3)
     strategy = tf.distribute.MirroredStrategy()
-
-    # strategy = tf.distribute.MirroredStrategy()
-    num_replicas = 1#strategy.num_replicas_in_sync
+    num_replicas = strategy.num_replicas_in_sync
     LOGGER.log('Number of Replicas: {}'.format(num_replicas))
-    # with strategy.scope():
-    # Build run config
-    gpu_options = tf.compat.v1.GPUOptions()
-    config = tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True)
-    config.gpu_options.allow_growth = True
-    config.gpu_options.force_gpu_compatible = True
-    config.intra_op_parallelism_threads = 1
-    config.inter_op_parallelism_threads = max(2, 40 // num_replicas - 2)
 
-    run_config = tf.estimator.RunConfig(
-        save_summary_steps=1,
-        tf_random_seed=None,
-        session_config=config,
-        save_checkpoints_steps=params['max_steps'],
-        keep_checkpoint_max=1)
+    with strategy.scope():
+        model = unet_v1((256, 256, 9))
+        model.compile(optimizer='adam', loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+                metrics=['accuracy'])
 
-    # Build the estimator model
-    estimator = tf.estimator.Estimator(
-        model_fn=unet_fn,
-        model_dir=params['model_dir'],
-        config=run_config,
-        params=params)
+        estimator = tf.keras.estimator.model_to_estimator(keras_model=model)
 
-    dataset = Sentinel3Dataset(data_dir=params['data_dir'],
-                      batch_size=params['batch_size'],
-                      augment=params['augment'],
-                      num_gpus=num_replicas,
-                      seed=params['seed'])
+        dataset = Sentinel3Dataset(data_dir=params['data_dir'],
+                          batch_size=params['batch_size'],
+                          augment=params['augment'],
+                          num_gpus=num_replicas,
+                          seed=params['seed'])
 
-    benchmark_results = {}
+        benchmark_results = {}
 
-    if 'train' in params['exec_mode']:
-        hooks = [TrainingHook(params['log_every'])]
+        if 'train' in params['exec_mode']:
+            hooks = []
 
-        train_profiler_hook = ProfilingHook(params['batch_size'],
+            train_profiler_hook = ProfilingHook(params['batch_size'],
+                                       params['log_every'],
+                                       params['warmup_steps'], num_replicas=num_replicas)
+            hooks.append(train_profiler_hook)
+
+            LOGGER.log('Begin Training...')
+            LOGGER.log('Training for {} steps'.format(params['max_steps']))
+
+            LOGGER.log(tags.RUN_START)
+            estimator.train(
+                input_fn=dataset.train_fn,
+                steps=params['max_steps'],
+                hooks=hooks)
+            LOGGER.log(tags.RUN_STOP)
+
+            benchmark_results['train'] = train_profiler_hook.get_results()
+
+        if 'predict' in params['exec_mode']:
+            test_profiler_hook = ProfilingHook(params['batch_size'],
                                    params['log_every'],
-                                   params['warmup_steps'], num_replicas=num_replicas)
-        hooks.append(train_profiler_hook)
+                                  0, num_replicas=num_replicas)
+            hooks = [test_profiler_hook]
 
-        LOGGER.log('Begin Training...')
-        LOGGER.log('Training for {} steps'.format(params['max_steps']))
+            predict_steps = params['warmup_steps'] + dataset.test_size
 
-        LOGGER.log(tags.RUN_START)
-        estimator.train(
-            input_fn=dataset.train_fn,
-            steps=params['max_steps'],
-            hooks=hooks)
-        LOGGER.log(tags.RUN_STOP)
+            LOGGER.log('Begin Predict...')
+            LOGGER.log(tags.RUN_START)
+            LOGGER.log('Predicting for {} steps'.format(predict_steps))
 
-        benchmark_results['train'] = train_profiler_hook.get_results()
+            gen = estimator.predict(input_fn=lambda:
+                    dataset.test_fn(predict_steps), hooks=hooks)
 
-    if 'predict' in params['exec_mode']:
-        test_profiler_hook = ProfilingHook(params['batch_size'],
-                               params['log_every'],
-                              0, num_replicas=num_replicas)
-        hooks = [test_profiler_hook]
+            # Call the generator actually make the predictions
+            for result in gen:
+                pass
 
-        predict_steps = params['warmup_steps'] + dataset.test_size
+            LOGGER.log("Predict finished")
 
-        LOGGER.log('Begin Predict...')
-        LOGGER.log(tags.RUN_START)
-        LOGGER.log('Predicting for {} steps'.format(predict_steps))
+            benchmark_results['test'] = test_profiler_hook.get_results()
 
-        gen = estimator.predict(input_fn=lambda:
-                dataset.test_fn(predict_steps), hooks=hooks)
-
-        # Call the generator actually make the predictions
-        for result in gen:
-            pass
-
-        LOGGER.log("Predict finished")
-
-        benchmark_results['test'] = test_profiler_hook.get_results()
-
-    results_file = Path(params['model_dir']).joinpath('results.json')
-    with results_file.open('w') as handle:
-        json.dump(benchmark_results, handle)
+        results_file = Path(params['model_dir']).joinpath('results.json')
+        with results_file.open('w') as handle:
+            json.dump(benchmark_results, handle)
 
 
 if __name__ == '__main__':

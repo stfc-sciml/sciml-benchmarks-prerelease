@@ -105,9 +105,9 @@ class Sentinel3Dataset():
         img = tf.expand_dims(img, axis=0)
         msk = tf.expand_dims(msk, axis=0)
 
-        img = tf.extract_image_patches(img, [1, 256, 256, 1], [1, 256, 256, 1], [
+        img = tf.image.extract_patches(img, [1, 256, 256, 1], [1, 256, 256, 1], [
                                        1, 1, 1, 1], padding='VALID')
-        msk = tf.extract_image_patches(msk, [1, 256, 256, 1], [1, 256, 256, 1], [
+        msk = tf.image.extract_patches(msk, [1, 256, 256, 1], [1, 256, 256, 1], [
                                        1, 1, 1, 1], padding='VALID')
 
         n, nx, ny, np = img.shape
@@ -121,8 +121,7 @@ class Sentinel3Dataset():
         dataset = tf.data.Dataset.from_tensor_slices(self._train_images)
         dataset = dataset.shuffle(1000)
         dataset = dataset.shard(self._num_gpus, self._gpu_id)
-        dataset = dataset.apply(tf.contrib.data.parallel_interleave(
-            self._generator, cycle_length=2))
+        dataset = dataset.interleave(self._generator, cycle_length=2)
         dataset = dataset.map(self._transform)
         dataset = dataset.apply(tf.data.experimental.unbatch())
         dataset = dataset.shuffle(self._batch_size * 3)
@@ -136,8 +135,7 @@ class Sentinel3Dataset():
         dataset = tf.data.Dataset.from_tensor_slices(self._test_images)
         dataset = dataset.shuffle(1000)
         dataset = dataset.shard(self._num_gpus, self._gpu_id)
-        dataset = dataset.apply(tf.contrib.data.parallel_interleave(
-            self._generator, cycle_length=2))
+        dataset = dataset.interleave(self._generator, cycle_length=2)
         dataset = dataset.map(self._transform)
         dataset = dataset.apply(tf.data.experimental.unbatch())
         dataset = dataset.shuffle(self._batch_size * 3)
