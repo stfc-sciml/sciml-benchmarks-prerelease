@@ -66,7 +66,7 @@ def get_caller(root_dir=None):
     stack_index = 0
     while stack_index < len(stack_files) and stack_files[stack_index] != 'logger.py':
         stack_index += 1
-    while (stack_index < len(stack_files) and 
+    while (stack_index < len(stack_files) and
             stack_files[stack_index] in ['logger.py', 'autologging.py', 'contextlib.py']):
         stack_index += 1
 
@@ -107,6 +107,9 @@ class AverageMeter(object):
         self.value += value * n
 
     def get_value(self):
+        if self.count == 0:
+            return 0
+
         return self.value / self.count
 
     def get_last(self):
@@ -126,7 +129,7 @@ class JsonBackend(object):
             ('iter', OrderedDict()),
             ('event', OrderedDict()),
             ])
-        
+
         self.json_log['epoch']['x'] = []
         if self.logging_scope == Scope.TRAIN_ITER:
             self.json_log['iter']['x'] = [[]]
@@ -143,12 +146,12 @@ class JsonBackend(object):
     def log(self, key, value):
         if _data['current_scope'] == Scope.RUN:
             self.json_log['run'][key] = value
-        elif _data['current_scope'] == Scope.EPOCH: 
+        elif _data['current_scope'] == Scope.EPOCH:
             pass
         elif _data['current_scope'] == Scope.TRAIN_ITER:
             pass
         else:
-            raise ValueError('log function for scope "', _data['current_scope'], 
+            raise ValueError('log function for scope "', _data['current_scope'],
                     '" not implemented')
 
     def log_event(self, key, value):
@@ -163,7 +166,7 @@ class JsonBackend(object):
         self.json_log['event'][key].append(str(entry))
 
     def log_iteration_summary(self):
-        if (self.logging_scope == Scope.TRAIN_ITER and 
+        if (self.logging_scope == Scope.TRAIN_ITER and
                 _data['total_iteration'] % self.iteration_interval == 0):
             for key, m in _data['metrics'].items():
                 if m.metric_scope == Scope.TRAIN_ITER:
@@ -184,11 +187,11 @@ class JsonBackend(object):
         for key, m in _data['metrics'].items():
             if m.metric_scope == Scope.EPOCH:
                 self.json_log['epoch'][key].append(str(m.get_value()))
-            elif (m.metric_scope == Scope.TRAIN_ITER and 
+            elif (m.metric_scope == Scope.TRAIN_ITER and
                     self.logging_scope == Scope.TRAIN_ITER):
                 # create new sublists for each iter metric in the next epoch
                 self.json_log['iter'][key].append([])
-        
+
         # log x for epoch number
         self.json_log['epoch']['x'].append(_data['epoch'])
 
@@ -247,7 +250,7 @@ class _ParentStdOutBackend(object):
     def log(self, key, value):
         if _data['current_scope'] > self.logging_scope:
             pass
-        elif (_data['current_scope'] == Scope.TRAIN_ITER and 
+        elif (_data['current_scope'] == Scope.TRAIN_ITER and
                 _data['total_iteration'] % self.iteration_interval != 0):
             pass
         else:
@@ -255,9 +258,9 @@ class _ParentStdOutBackend(object):
 
     def log_event(self, key, value):
         self.log_stdout(key, value)
-        
+
     def log_stdout(self, key, value=None, forced=False):
-        # TODO: worker 0 
+        # TODO: worker 0
         # only the 0-worker will log
         #if not forced and self.worker != 0:
         #    pass
@@ -272,7 +275,7 @@ class _ParentStdOutBackend(object):
         now = time.time()
 
         message = '{prefix}{token}v{ver} {model} {secs:.9f} ({call_site}) {msg}'.format(
-            prefix=self.prefix, token=self.token, ver=self.version, secs=now, 
+            prefix=self.prefix, token=self.token, ver=self.version, secs=now,
             model=_data['model'],
             call_site=call_site, msg=msg)
 
@@ -290,15 +293,15 @@ class _ParentStdOutBackend(object):
 class StdOutBackend(_ParentStdOutBackend):
 
     def __init__(self, log_file=None, logging_scope=Scope.TRAIN_ITER, iteration_interval=1):
-        _ParentStdOutBackend.__init__(self, name=NVLOGGER_NAME, token=NVLOGGER_TOKEN, 
-                version=NVLOGGER_VERSION, log_file=log_file, logging_scope=logging_scope, 
+        _ParentStdOutBackend.__init__(self, name=NVLOGGER_NAME, token=NVLOGGER_TOKEN,
+                version=NVLOGGER_VERSION, log_file=log_file, logging_scope=logging_scope,
                 iteration_interval=iteration_interval)
-        
+
 class MLPerfBackend(_ParentStdOutBackend):
 
     def __init__(self, log_file=None, logging_scope=Scope.TRAIN_ITER, iteration_interval=1):
-        _ParentStdOutBackend.__init__(self, name=MLPERF_NAME, token=MLPERF_TOKEN, 
-                version=MLPERF_VERSION, log_file=log_file, logging_scope=logging_scope, 
+        _ParentStdOutBackend.__init__(self, name=MLPERF_NAME, token=MLPERF_TOKEN,
+                version=MLPERF_VERSION, log_file=log_file, logging_scope=logging_scope,
                 iteration_interval=iteration_interval)
 
 class CompactBackend(object):
@@ -320,23 +323,23 @@ class CompactBackend(object):
             self.file_handler = logging.FileHandler(self.log_file, mode='w')
             self.file_handler.setLevel(logging.DEBUG)
             self.logger.addHandler(self.file_handler)
-    
+
     def register_metric(self, key, meter=None, metric_scope=Scope.EPOCH):
         pass
-    
+
     def timestamp_prefix(self):
         return datetime.datetime.now().strftime('[%Y-%m-%d %H:%M:%S]')
 
     def log(self, key, value):
         if _data['current_scope'] == Scope.RUN:
             self.log_event(key, value)
-    
+
     def log_event(self, key, value):
         msg = self.timestamp_prefix() + ' ' + str(key)
         if value is not None:
             msg += ": " + str(value)
         self.logger.debug(msg)
-    
+
     def log_epoch_summary(self):
         if self.logging_scope >= Scope.EPOCH:
             summary = self.timestamp_prefix() + ' Epoch {:<4} '.format(str(_data['epoch']) + ':')
@@ -352,7 +355,7 @@ class CompactBackend(object):
                 if m.metric_scope == Scope.TRAIN_ITER:
                     summary += str(key) + ": " + str(m.get_last()) + ", "
             self.logger.debug(summary)
- 
+
     def timed_block_start(self, name):
         pass
 
@@ -371,14 +374,14 @@ class _Logger(object):
                 ]
 
         self.level = Level.INFO
-   
+
     def set_model_name(self, name):
         _data['model'] = name
 
 
     def set_backends(self, backends):
         self.backends = backends
-        
+
     def register_metric(self, key, meter=None, metric_scope=Scope.EPOCH):
         if meter is None:
             meter = StandardMeter()
@@ -417,14 +420,14 @@ class _Logger(object):
     def log_event(self, key, value=None):
         for b in self.backends:
             b.log_event(key, value)
-    
+
     def timed_block_start(self, name):
         if not name in _data['timed_blocks']:
             _data['timed_blocks'][name] = OrderedDict()
         _data['timed_blocks'][name]['start'] = time.time()
         for b in self.backends:
             b.timed_block_start(name)
-    
+
     def timed_block_stop(self, name):
         if not name in _data['timed_blocks']:
             raise ValueError('timed_block_stop called before timed_block_start for ' + name)
@@ -446,7 +449,7 @@ class _Logger(object):
         _data['current_scope'] = Scope.EPOCH
 
     def epoch_start(self):
-        _data['current_scope'] = Scope.EPOCH 
+        _data['current_scope'] = Scope.EPOCH
         _data['epoch'] += 1
         _data['iteration'] = -1
 

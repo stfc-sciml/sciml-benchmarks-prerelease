@@ -18,7 +18,7 @@ import tensorflow as tf
 from dllogger import LOGGER, AverageMeter
 
 
-class ProfilingHook(tf.estimator.SessionRunHook):
+class ProfilingHook(tf.keras.callbacks.Callback):
 
     def __init__(self, batch_size, log_every, warmup_steps, num_replicas=1):
         self._num_replicas = num_replicas
@@ -28,17 +28,31 @@ class ProfilingHook(tf.estimator.SessionRunHook):
         self._global_batch_size = batch_size * self._num_replicas
         self._meter = AverageMeter()
         self._t0 = 0
+        self._warmup_meter = AverageMeter()
+        self._warmup_duration = 0
+        self._warmup_t0 = 0
+        self._warmup_finished = False
 
-    def before_run(self, run_context):
-        if self._current_step % self._log_every == 0:
-            LOGGER.log('iter_start', self._current_step)
+    def _update_batch_start(self):
+        if self._current_step <= self._warmup_steps:
+            self._warmup_t0 = time.time()
 
         if self._current_step > self._warmup_steps:
+            # Check if this was the first step passed the warmup
+            if not self._warmup_finished:
+                # Ok, this was the first step after the warmup
+                # calculate the duration and mark warmup as finished
+                self._warmup_duration = time.time() - self._session_begin_time
+                self._warmup_finished = True
+
             self._t0 = time.time()
 
-    def after_run(self,
-                  run_context,
-                  run_values):
+    def _update_batch_end(self):
+        if self._current_step <= self._warmup_steps:
+            batch_time = time.time() - self._warmup_t0
+            ips = self._global_batch_size / batch_time
+            self._warmup_meter.record(ips)
+
         if self._current_step > self._warmup_steps:
             batch_time = time.time() - self._t0
             ips = self._global_batch_size / batch_time
@@ -46,15 +60,36 @@ class ProfilingHook(tf.estimator.SessionRunHook):
 
         self._current_step += 1
 
-    def begin(self):
+    def on_train_batch_begin(self, batch, logs=None):
+        self._update_batch_start()
+
+    def on_train_batch_end(self, batch, logs=None):
+        self._update_batch_end()
+
+    def on_predict_batch_begin(self, batch, logs=None):
+        self._update_batch_start()
+
+    def on_predict_batch_end(self, batch, logs=None):
+        self._update_batch_end()
+
+    def on_train_begin(self, logs=None):
         self._session_begin_time = time.time()
 
-    def end(self, session):
+    def on_train_end(self, logs=None):
+        self._session_end_time = time.time()
+        LOGGER.log('average_images_per_second', self._meter.get_value())
+
+    def on_predict_begin(self, logs=None):
+        self._session_begin_time = time.time()
+
+    def on_predict_end(self, logs=None):
         self._session_end_time = time.time()
         LOGGER.log('average_images_per_second', self._meter.get_value())
 
     def get_results(self):
         return {
-                'avg_images_per_sec': self._meter.get_value(),
+                'warmup_avg_ips': self._warmup_meter.get_value(),
+                'warmup_duration': self._warmup_duration,
+                'avg_ips': self._meter.get_value(),
                 'total_duration': self._session_end_time - self._session_begin_time
                 }

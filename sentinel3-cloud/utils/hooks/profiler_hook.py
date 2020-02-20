@@ -23,7 +23,7 @@ import dllogger.logger as dllg
 from dllogger import tags
 
 
-class ProfilerHook(tf.estimator.SessionRunHook):
+class ProfilerHook(tf.keras.callbacks.Callback):
 
     def __init__(self, out_dir, global_batch_size, log_every=10, warmup_steps=20, num_replicas=1):
         self.num_replicas = num_replicas
@@ -39,42 +39,36 @@ class ProfilerHook(tf.estimator.SessionRunHook):
 
         self._perf = dllg.AverageMeter()
 
-        LOGGER.register_metric('loss', meter=dllg.AverageMeter(), metric_scope=dllg.Scope.TRAIN_ITER)
-        LOGGER.register_metric('dice_loss', meter=dllg.AverageMeter(), metric_scope=dllg.Scope.TRAIN_ITER)
-        LOGGER.register_metric('total_loss', meter=dllg.AverageMeter(), metric_scope=dllg.Scope.TRAIN_ITER)
+        # LOGGER.register_metric('loss', meter=dllg.AverageMeter(), metric_scope=dllg.Scope.TRAIN_ITER)
+        # LOGGER.register_metric('dice_loss', meter=dllg.AverageMeter(), metric_scope=dllg.Scope.TRAIN_ITER)
+        # LOGGER.register_metric('total_loss', meter=dllg.AverageMeter(), metric_scope=dllg.Scope.TRAIN_ITER)
 
         self._warmup_steps = warmup_steps
         self._global_batch_size = global_batch_size
         self._current_step = 0
 
-    def before_run(self, run_context):
+    def on_batch_begin(self, batch, logs=None):
         LOGGER.iteration_start()
-        run_args = tf.train.SessionRunArgs(
-            fetches=[
-                'UNet/cross_loss_ref:0',
-                'UNet/dice_loss_ref:0',
-                'UNet/total_loss_ref:0',
-                ]
-        )
+        # run_args = tf.train.SessionRunArgs(
+        #     fetches=[
+        #         'UNet/cross_loss_ref:0',
+        #         'UNet/dice_loss_ref:0',
+        #         'UNet/total_loss_ref:0',
+        #         ]
+        # )
         self._t0 = time.time()
 
-        return run_args
-
-    def after_run(self,
-                  run_context,
-                  run_values):
-        cross_loss, dice_loss, total_loss = run_values.results
-
+    def on_batch_end(self, batch, logs=None):
         batch_time = time.time() - self._t0
         ips = self._global_batch_size / batch_time
         ips *= self.num_replicas
 
         if self._current_step >= self._warmup_steps:
-            LOGGER.log("iteration", int(self._current_step))
-            LOGGER.log("loss", float(cross_loss))
-            LOGGER.log("dice_loss", float(dice_loss))
-            LOGGER.log("total_loss", float(total_loss))
-            self._perf.record(ips)
+            # LOGGER.log("iteration", int(self._current_step))
+            # LOGGER.log("loss", float(cross_loss))
+            # LOGGER.log("dice_loss", float(dice_loss))
+            # LOGGER.log("total_loss", float(total_loss))
+            # self._perf.record(ips)
             LOGGER.iteration_stop()
 
         self._current_step += 1

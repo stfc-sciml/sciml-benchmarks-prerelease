@@ -21,6 +21,7 @@ import numpy as np
 import xarray as xr
 from scipy import interpolate
 from skimage import transform
+from utils.constants import PATCH_SIZE, IMAGE_H, IMAGE_W
 
 
 class Sentinel3Dataset():
@@ -63,7 +64,7 @@ class Sentinel3Dataset():
         # Mean - Std norm
         bts = (bts - 270.0) / 22.0
         bts = np.transpose(bts, [1, 2, 0])
-        bts = transform.resize(bts, (1200, 1500, 3))
+        bts = transform.resize(bts, (IMAGE_H, IMAGE_W, 3))
 
         rads = rads.to_array().values
 
@@ -72,7 +73,7 @@ class Sentinel3Dataset():
         # Mean - Std norm, already in range 0-1, convert to (-1, 1) range.
         rads = rads - 0.5
         rads = np.transpose(rads, [1, 2, 0])
-        rads = transform.resize(rads, (1200, 1500, 6))
+        rads = transform.resize(rads, (IMAGE_H, IMAGE_W, 6))
 
         channels = np.concatenate([rads, bts], axis=-1)
         channels = channels[100:-100, 100:-100]
@@ -81,7 +82,7 @@ class Sentinel3Dataset():
         mask = mask.astype(np.float32)
         mask = np.nan_to_num(mask)
         mask = transform.resize(
-            mask, (1200, 1500), order=0, anti_aliasing=False)
+            mask, (IMAGE_H, IMAGE_W), order=0, anti_aliasing=False)
         mask = mask[100:-100, 100:-100]
 
 
@@ -105,14 +106,15 @@ class Sentinel3Dataset():
         img = tf.expand_dims(img, axis=0)
         msk = tf.expand_dims(msk, axis=0)
 
-        img = tf.image.extract_patches(img, [1, 256, 256, 1], [1, 256, 256, 1], [
+        dims = [1, PATCH_SIZE, PATCH_SIZE, 1]
+        img = tf.image.extract_patches(img, dims, dims, [
                                        1, 1, 1, 1], padding='VALID')
-        msk = tf.image.extract_patches(msk, [1, 256, 256, 1], [1, 256, 256, 1], [
+        msk = tf.image.extract_patches(msk, dims, dims, [
                                        1, 1, 1, 1], padding='VALID')
 
         n, nx, ny, np = img.shape
-        img = tf.reshape(img, (n*nx*ny, 256, 256, 9))
-        msk = tf.reshape(msk, (n*nx*ny, 256, 256, 2))
+        img = tf.reshape(img, (n*nx*ny, PATCH_SIZE, PATCH_SIZE, 9))
+        msk = tf.reshape(msk, (n*nx*ny, PATCH_SIZE, PATCH_SIZE, 2))
 
         return img, msk
 
@@ -120,10 +122,9 @@ class Sentinel3Dataset():
         """Input function for training"""
         dataset = tf.data.Dataset.from_tensor_slices(self._train_images)
         dataset = dataset.shuffle(1000)
-        dataset = dataset.shard(self._num_gpus, self._gpu_id)
         dataset = dataset.interleave(self._generator, cycle_length=2)
         dataset = dataset.map(self._transform)
-        dataset = dataset.apply(tf.data.experimental.unbatch())
+        dataset = dataset.unbatch()
         dataset = dataset.shuffle(self._batch_size * 3)
         dataset = dataset.batch(self._batch_size)
         dataset = dataset.prefetch(self._batch_size)
@@ -131,23 +132,18 @@ class Sentinel3Dataset():
         dataset = dataset.repeat()
         return dataset
 
-    def test_fn(self, count=-1):
+    def test_fn(self):
         dataset = tf.data.Dataset.from_tensor_slices(self._test_images)
-        dataset = dataset.shuffle(1000)
-        dataset = dataset.shard(self._num_gpus, self._gpu_id)
         dataset = dataset.interleave(self._generator, cycle_length=2)
         dataset = dataset.map(self._transform)
-        dataset = dataset.apply(tf.data.experimental.unbatch())
-        dataset = dataset.shuffle(self._batch_size * 3)
+        dataset = dataset.unbatch()
         dataset = dataset.map(lambda x, y: x)
         dataset = dataset.batch(self._batch_size)
         dataset = dataset.prefetch(self._batch_size)
-        dataset = dataset.repeat()
-        dataset = dataset.take(count)
         return dataset
 
     def synth_fn(self):
-        inputs = tf.truncated_normal((100, 256, 256, 9), dtype=tf.float32, mean=127.5, stddev=1, seed=self._seed,
+        inputs = tf.truncated_normal((100, PATCH_SIZE, PATCH_SIZE, 9), dtype=tf.float32, mean=127.5, stddev=1, seed=self._seed,
                                      name='synth_inputs')
         dataset = tf.data.Dataset.from_tensors(inputs)
         dataset = dataset.shard(self._num_gpus, self._gpu_id)

@@ -28,7 +28,6 @@ Example:
         runner.predict()
 
 """
-import os
 import tensorflow as tf
 
 from model.unet import unet_v1
@@ -64,15 +63,6 @@ def regularization_l2loss(weight_decay):
     return l2_loss
 
 
-def is_using_hvd():
-    env_vars = ["OMPI_COMM_WORLD_RANK", "OMPI_COMM_WORLD_SIZE"]
-
-    if all([var in os.environ for var in env_vars]):
-        return True
-    else:
-        return False
-
-
 def unet_fn(features, labels, mode, params):
     """ Model function for tf.Estimator
 
@@ -90,59 +80,48 @@ def unet_fn(features, labels, mode, params):
 
     """
     dtype = params['dtype']
-    max_steps = params['max_steps']
-    lr_init = params['learning_rate']
-    momentum = params['momentum']
 
-    device = '/gpu:0'
+    tf.keras.backend.set_learning_phase(mode == tf.estimator.ModeKeys.TRAIN)
 
-    global_step = tf.train.get_global_step()
-    learning_rate = tf.train.exponential_decay(lr_init, global_step,
-                                               decay_steps=max_steps,
-                                               decay_rate=0.96)
+    features = tf.cast(features, dtype)
 
-    with tf.device(device):
-        features = tf.cast(features, dtype)
+    output_map = unet_v1((256, 256, 9))(features)
 
-        output_map = unet_v1(features, mode)
+    if mode == tf.estimator.ModeKeys.PREDICT:
+        predictions = {'logits': tf.nn.softmax(output_map, axis=-1)}
+        return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
 
-        if mode == tf.estimator.ModeKeys.PREDICT:
-            predictions = {'logits': tf.nn.softmax(output_map, axis=-1)}
-            return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
+    n_classes = output_map.shape[-1]
 
-        n_classes = output_map.shape[-1].value
+    flat_logits = tf.reshape(tf.cast(output_map, tf.float32),
+                             [tf.shape(output_map)[0], -1, n_classes])
+    flat_labels = tf.reshape(labels,
+                             [tf.shape(output_map)[0], -1, n_classes])
 
-        flat_logits = tf.reshape(tf.cast(output_map, tf.float32),
-                                 [tf.shape(output_map)[0], -1, n_classes])
-        flat_labels = tf.reshape(labels,
-                                 [tf.shape(output_map)[0], -1, n_classes])
+    crossentropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=flat_logits,
+                                                                                  labels=flat_labels),
+                                       name='cross_loss_ref')
+    # dice_loss = tf.reduce_mean(1 - dice_coef(flat_logits, flat_labels), name='dice_loss_ref')
 
-        crossentropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=flat_logits,
-                                                                                      labels=flat_labels),
-                                           name='cross_loss_ref')
-        dice_loss = tf.reduce_mean(1 - dice_coef(flat_logits, flat_labels), name='dice_loss_ref')
+    # total_loss = tf.add(crossentropy_loss, dice_loss, name="total_loss_ref")
 
-        total_loss = tf.add(crossentropy_loss, dice_loss, name="total_loss_ref")
+    # accuracy, acc_op = tf.metrics.accuracy(tf.argmax(flat_labels, axis=-1), tf.argmax(flat_logits, axis=-1), name='accuracy_ref')
+    # tp, tp_op = tf.metrics.true_positives(tf.argmax(flat_labels, axis=-1), tf.argmax(flat_logits, axis=-1))
+    # fp, fp_op = tf.metrics.false_positives(tf.argmax(flat_labels, axis=-1), tf.argmax(flat_logits, axis=-1))
+    # tn, tn_op = tf.metrics.true_negatives(tf.argmax(flat_labels, axis=-1), tf.argmax(flat_logits, axis=-1))
+    # fn, fn_op = tf.metrics.false_negatives(tf.argmax(flat_labels, axis=-1), tf.argmax(flat_logits, axis=-1))
 
-        accuracy, acc_op = tf.metrics.accuracy(tf.argmax(flat_labels, axis=-1), tf.argmax(flat_logits, axis=-1), name='accuracy_ref')
-        tp, tp_op = tf.metrics.true_positives(tf.argmax(flat_labels, axis=-1), tf.argmax(flat_logits, axis=-1))
-        fp, fp_op = tf.metrics.false_positives(tf.argmax(flat_labels, axis=-1), tf.argmax(flat_logits, axis=-1))
-        tn, tn_op = tf.metrics.true_negatives(tf.argmax(flat_labels, axis=-1), tf.argmax(flat_logits, axis=-1))
-        fn, fn_op = tf.metrics.false_negatives(tf.argmax(flat_labels, axis=-1), tf.argmax(flat_logits, axis=-1))
+    optimizer = tf.keras.optimizers.Adam()
+    train_op = tf.contrib.layers.optimize_loss(
+		loss=crossentropy_loss,
+	    global_step=tf.contrib.framework.get_global_step(),
+	    learning_rate=params["learning_rate"],
+            momentum=params['momentum'],
+	    optimizer="adam")
 
-        opt = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=momentum)
-
-        with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-            deterministic = True
-            gate_gradients = (
-                tf.train.Optimizer.GATE_OP
-                if deterministic
-                else tf.train.Optimizer.GATE_NONE)
-
-            train_op = opt.minimize(crossentropy_loss, gate_gradients=gate_gradients, global_step=global_step)
-
-    logging_hook = tf.train.LoggingTensorHook({"loss" : crossentropy_loss,
-        'accuracy': acc_op, 'TP': tp_op, 'TN': tn_op, 'FP': fp_op, 'FN': fn_op}, every_n_iter=10)
+    logging_hook = tf.train.LoggingTensorHook({"loss" : crossentropy_loss},
+        every_n_iter=10)
+    # 'accuracy': acc_op, 'TP': tp_op, 'TN': tn_op, 'FP': fp_op, 'FN': fn_op},
 
     return tf.estimator.EstimatorSpec(mode, loss=crossentropy_loss, train_op=train_op, training_hooks=[logging_hook],
             eval_metric_ops={}, prediction_hooks=[logging_hook])
