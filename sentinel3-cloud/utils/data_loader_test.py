@@ -1,8 +1,8 @@
 import tensorflow as tf
 import pytest
 from pathlib import Path
-from data_loader import Sentinel3Dataset, ImageLoader
-from constants import PATCH_SIZE
+from utils.data_loader import Sentinel3Dataset, ImageLoader
+from utils.constants import PATCH_SIZE
 
 def test_sentinel3_dataset_train_fn():
     path = Path("dataset")
@@ -22,11 +22,6 @@ def test_sentinel3_dataset_train_fn():
     assert h == PATCH_SIZE
     assert w == PATCH_SIZE
     assert c == 2
-
-    output = list(dataset)
-    assert len(output) == 1
-    output = output[0]
-    assert output[0].shape == tf.TensorShape((2, PATCH_SIZE, PATCH_SIZE, 9))
 
 def test_sentinel3_dataset_test_fn():
     path = Path("dataset")
@@ -64,6 +59,18 @@ def test_sentinel3_dataset_load_single_batch(benchmark):
 
     benchmark(next, iterator)
 
+
+@pytest.mark.benchmark(
+    max_time=5,
+    min_rounds=1,
+    warmup=False
+)
+def test_sentinel3_dataset_parse_file(benchmark):
+    path = next(Path("dataset/train").glob('S3A*'))
+    path = str.encode(str(path))
+    dataset = Sentinel3Dataset(Path('dataset'), batch_size=16)
+
+    benchmark(lambda x: next(dataset._parse_file(x)), path)
 
 @pytest.mark.benchmark(
     max_time=5,

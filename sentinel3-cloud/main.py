@@ -24,42 +24,16 @@ Example:
 """
 
 import os
-import json
 import tensorflow as tf
 
-from pathlib import Path
-from dllogger import tags
 from dllogger.logger import LOGGER
 from model.unet import unet_v1
+from utils.benchmark import Benchmark
 from utils.cmd_util import PARSER, _cmd_params
 from utils.data_loader import Sentinel3Dataset
-from utils.hooks.profiling_hook import ProfilingHook
 from utils.constants import PATCH_SIZE
 
-def simulate_multi_gpu():
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    if gpus:
-      # Create 2 virtual GPUs with 1GB memory each
-      try:
-        tf.config.experimental.set_virtual_device_configuration(
-            gpus[0],
-            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=7000),
-             tf.config.experimental.VirtualDeviceConfiguration(memory_limit=7000)])
-        logical_gpus = tf.config.experimental.list_logical_devices('GPU')
-        print(len(gpus), "Physical GPU,", len(logical_gpus), "Logical GPUs")
-      except RuntimeError as e:
-        # Virtual devices must be set before GPUs have been initialized
-        print(e)
-
-def main():
-    """
-    Starting point of the application
-    """
-
-    flags = PARSER.parse_args()
-
-    params = _cmd_params(flags)
-
+def set_environment_variables(use_amp=False, **kwargs):
     # Optimization flags
     os.environ['CUDA_CACHE_DISABLE'] = '0'
 
@@ -76,73 +50,55 @@ def main():
     os.environ['TF_SYNC_ON_FINISH'] = '0'
     os.environ['TF_AUTOTUNE_THRESHOLD'] = '2'
 
-    if params['use_amp']:
+    if use_amp:
         os.environ['TF_ENABLE_AUTO_MIXED_PRECISION'] = '1'
 
-    # simulate_multi_gpu()
+
+def main():
+    """
+    Starting point of the application
+    """
+
+    flags = PARSER.parse_args()
+    params = _cmd_params(flags)
+
+    set_environment_variables(**params)
+
     strategy = tf.distribute.MirroredStrategy()
     num_replicas = strategy.num_replicas_in_sync
-    LOGGER.log('Number of Replicas: {}'.format(num_replicas))
+
+    params['num_replicas'] = num_replicas
+    params['global_batch_size'] = params['batch_size'] * num_replicas
+
+    LOGGER.log('Number of Replicas: {}'.format(params['num_replicas']))
+    LOGGER.log('Global Batch Size: {}'.format(params['global_batch_size']))
+    LOGGER.log('Replica Batch Size: {}'.format(params['batch_size']))
 
     with strategy.scope():
         model = unet_v1((PATCH_SIZE, PATCH_SIZE, 9))
-        model.compile(optimizer='adam', loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
-                      metrics=['accuracy'])
+        model.compile(optimizer='adam', lr=params['learning_rate'],
+                      loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+                      metrics=[
+                          'accuracy',
+                          # tf.keras.metrics.TruePositives(),
+                          # tf.keras.metrics.TrueNegatives(),
+                          # tf.keras.metrics.FalsePositives(),
+                          # tf.keras.metrics.FalseNegatives()
+                      ])
 
     dataset = Sentinel3Dataset(data_dir=params['data_dir'],
-                               batch_size=params['batch_size'],
-                               augment=params['augment'],
-                               num_gpus=num_replicas,
+                               batch_size=params['global_batch_size'],
                                seed=params['seed'])
 
-    benchmark_results = {}
+    benchmark = Benchmark(model, dataset)
 
     if 'train' in params['exec_mode']:
-        hooks = []
-        train_profiler_hook = ProfilingHook(params['batch_size'],
-                                            params['log_every'],
-                                            params['warmup_steps'], num_replicas=num_replicas)
-        hooks.append(train_profiler_hook)
-
-        train_dataset = dataset.train_fn()
-
-        LOGGER.log('Begin Training...')
-        LOGGER.log('Training for {} steps'.format(params['max_steps']))
-
-        LOGGER.log(tags.RUN_START)
-        model.fit(
-            train_dataset,
-            epochs=params['max_steps'],
-            steps_per_epoch=params['warmup_steps'],
-            callbacks=hooks)
-        LOGGER.log(tags.RUN_STOP)
-
-        benchmark_results['train'] = train_profiler_hook.get_results()
+        benchmark.train(params)
 
     if 'predict' in params['exec_mode']:
-        test_profiler_hook = ProfilingHook(params['batch_size'],
-                                           params['log_every'],
-                                           warmup_steps=-1, num_replicas=num_replicas)
-        hooks = [test_profiler_hook]
+        benchmark.predict(params)
 
-        predict_steps = dataset.test_size
-
-        LOGGER.log('Begin Predict...')
-        LOGGER.log(tags.RUN_START)
-        LOGGER.log('Predicting for {} steps'.format(predict_steps))
-
-        test_dataset = dataset.test_fn()
-
-        model.predict(test_dataset, callbacks=hooks)
-
-        LOGGER.log("Predict finished")
-
-        benchmark_results['test'] = test_profiler_hook.get_results()
-
-        results_file = Path(params['model_dir']).joinpath('results.json')
-        with results_file.open('w') as handle:
-            json.dump(benchmark_results, handle)
-
+    benchmark.save_results(params['model_dir'])
 
 if __name__ == '__main__':
     main()

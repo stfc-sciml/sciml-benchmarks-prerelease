@@ -22,8 +22,8 @@
      --model_dir $3 \
      --warmup_steps 2286 \
      --log_every 100 \
-     --max_steps 30 \
-     --batch_size 4 \
+     --epochs 30 \
+     --batch_size 8 \
      --learning_rate 0.001 \
      --momentum 0.01 \
      --benchmark \

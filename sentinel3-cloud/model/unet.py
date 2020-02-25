@@ -37,13 +37,13 @@ def unet_v1(input_shape):
 
     skip_connections.append(skip)
 
-    for idx, filters in enumerate([128, 256, 512]):
+    for idx, filters in enumerate([64, 128, 256, 512]):
         out, skip = downsample_block(out, filters=filters, idx=idx)
         skip_connections.append(skip)
 
     out = bottleneck(out, filters=1024)
 
-    for idx, filters in enumerate([512, 256, 128]):
+    for idx, filters in enumerate([512, 256, 128, 64]):
         out = upsample_block(out,
                              residual_input=skip_connections.pop(),
                              filters=filters,

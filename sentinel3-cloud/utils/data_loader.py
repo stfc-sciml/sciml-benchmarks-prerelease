@@ -21,13 +21,12 @@ import numpy as np
 import xarray as xr
 from scipy import interpolate
 from skimage import transform
-from utils.constants import PATCH_SIZE, IMAGE_H, IMAGE_W
-
+from utils.constants import PATCH_SIZE, PATCHES_PER_IMAGE, IMAGE_H, IMAGE_W
 
 class Sentinel3Dataset():
     """Load, separate and prepare the data for training and prediction"""
 
-    def __init__(self, data_dir, batch_size, augment=False, gpu_id=0, num_gpus=1, seed=0):
+    def __init__(self, data_dir, batch_size, seed=0):
         self._data_dir = data_dir
         self._batch_size = batch_size
 
@@ -37,18 +36,16 @@ class Sentinel3Dataset():
         self._test_images = Path(self._data_dir).joinpath('test').glob('S3A*')
         self._test_images = list(map(str, self._test_images))
 
-        self._num_gpus = num_gpus
-        self._gpu_id = gpu_id
         self._seed = seed
 
 
     @property
     def train_size(self):
-        return len(self._train_images)
+        return len(self._train_images) * PATCHES_PER_IMAGE
 
     @property
     def test_size(self):
-        return len(self._test_images)
+        return len(self._test_images) * PATCHES_PER_IMAGE
 
     def _parse_file(self, path):
         path = path.decode()
@@ -76,17 +73,16 @@ class Sentinel3Dataset():
         rads = transform.resize(rads, (IMAGE_H, IMAGE_W, 6))
 
         channels = np.concatenate([rads, bts], axis=-1)
-        channels = channels[100:-100, 100:-100]
+        channels = channels[88:-88, 238:-238]
 
         mask[mask > 0] = 1
         mask = mask.astype(np.float32)
         mask = np.nan_to_num(mask)
         mask = transform.resize(
             mask, (IMAGE_H, IMAGE_W), order=0, anti_aliasing=False)
-        mask = mask[100:-100, 100:-100]
+        mask = mask[88:-88, 238:-238]
 
-
-        msk = np.zeros((1000, 1300, 2))
+        msk = np.zeros((1024, 1024, 2))
         msk[..., 0] = mask
         msk[..., 1] = 1-mask
 
@@ -94,8 +90,8 @@ class Sentinel3Dataset():
 
     def _generator(self, path):
         types = ( tf.float32, tf.float32)
-        shapes = (tf.TensorShape( [1000, 1300, 9]), tf.TensorShape([1000,
-            1300, 2]))
+        shapes = (tf.TensorShape( [1024, 1024, 9]), tf.TensorShape([1024,
+            1024, 2]))
         dataset = tf.data.Dataset.from_generator(self._parse_file,
                                                  output_types=types,
                                                  output_shapes=shapes,
@@ -128,7 +124,7 @@ class Sentinel3Dataset():
         dataset = dataset.shuffle(self._batch_size * 3)
         dataset = dataset.batch(self._batch_size)
         dataset = dataset.prefetch(self._batch_size)
-        dataset = dataset.cache()
+        # dataset = dataset.cache()
         dataset = dataset.repeat()
         return dataset
 
@@ -137,16 +133,6 @@ class Sentinel3Dataset():
         dataset = dataset.interleave(self._generator, cycle_length=2)
         dataset = dataset.map(self._transform)
         dataset = dataset.unbatch()
-        dataset = dataset.map(lambda x, y: x)
-        dataset = dataset.batch(self._batch_size)
-        dataset = dataset.prefetch(self._batch_size)
-        return dataset
-
-    def synth_fn(self):
-        inputs = tf.truncated_normal((100, PATCH_SIZE, PATCH_SIZE, 9), dtype=tf.float32, mean=127.5, stddev=1, seed=self._seed,
-                                     name='synth_inputs')
-        dataset = tf.data.Dataset.from_tensors(inputs)
-        dataset = dataset.shard(self._num_gpus, self._gpu_id)
         dataset = dataset.batch(self._batch_size)
         dataset = dataset.prefetch(self._batch_size)
         return dataset
