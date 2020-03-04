@@ -6,3 +6,4 @@ xarray
 scikit-image
 pytest
 pytest-benchmark
+nvtx-plugins

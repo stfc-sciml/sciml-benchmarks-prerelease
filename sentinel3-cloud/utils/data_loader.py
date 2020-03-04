@@ -20,8 +20,7 @@ import tensorflow as tf
 import numpy as np
 import xarray as xr
 from scipy import interpolate
-from skimage import transform
-from utils.constants import PATCH_SIZE, PATCHES_PER_IMAGE, IMAGE_H, IMAGE_W
+from utils.constants import PATCH_SIZE, PATCHES_PER_IMAGE
 
 class Sentinel3Dataset():
     """Load, separate and prepare the data for training and prediction"""
@@ -38,7 +37,6 @@ class Sentinel3Dataset():
 
         self._seed = seed
 
-
     @property
     def train_size(self):
         return len(self._train_images) * PATCHES_PER_IMAGE
@@ -47,81 +45,91 @@ class Sentinel3Dataset():
     def test_size(self):
         return len(self._test_images) * PATCHES_PER_IMAGE
 
-    def _parse_file(self, path):
-        path = path.decode()
-
+    def _load_data(self, path):
         loader = ImageLoader(path)
         rads = loader.load_radiances()
         bts = loader.load_bts()
         flags = loader.load_flags()
+
+        rads = rads.to_array().values
         bts = bts.to_array().values
         mask = flags.bayes_in.values
 
-        bts = np.nan_to_num(bts, nan=bts[~np.isnan(bts)].min())
+        rads = tf.convert_to_tensor(rads)
+        bts = tf.convert_to_tensor(bts)
+        mask = tf.convert_to_tensor(mask)
+
+        return rads, bts, mask
+
+    def _parse_file(self, path):
+        path = path.decode()
+
+        rads, bts, mask = self._load_data(path)
+
+        bt_nan_mask = tf.math.is_finite(bts)
+        fill_value = tf.math.reduce_min(tf.boolean_mask(bts, bt_nan_mask))
+        bts = tf.where(bt_nan_mask, bts, fill_value)
+
         # Mean - Std norm
         bts = (bts - 270.0) / 22.0
-        bts = np.transpose(bts, [1, 2, 0])
-        bts = transform.resize(bts, (IMAGE_H, IMAGE_W, 3))
+        bts = tf.transpose(bts, [1, 2, 0])
+        bts = tf.expand_dims(bts, axis=0)
 
-        rads = rads.to_array().values
-
-        fill_value = 0 if np.all(np.isnan(rads)) else np.nanmin(rads)
-        rads = np.nan_to_num(rads, nan=fill_value)
+        rads_nan_mask = tf.math.is_finite(rads)
+        fill_value = tf.reduce_min(tf.boolean_mask(rads, rads_nan_mask))
+        fill_value = tf.where(tf.math.is_finite(fill_value), fill_value, 0)
+        rads = tf.where(rads_nan_mask, rads, fill_value)
         # Mean - Std norm, already in range 0-1, convert to (-1, 1) range.
         rads = rads - 0.5
-        rads = np.transpose(rads, [1, 2, 0])
-        rads = transform.resize(rads, (IMAGE_H, IMAGE_W, 6))
+        rads = tf.transpose(rads, [1, 2, 0])
+        rads = tf.expand_dims(rads, axis=0)
 
-        channels = np.concatenate([rads, bts], axis=-1)
-        channels = channels[88:-88, 238:-238]
+        mask = tf.cast(mask, tf.float32)
+        mask = tf.where(tf.math.is_finite(mask), mask, 0.)
+        mask = tf.where(tf.math.greater(mask, 0), 1, 0)
+        mask = tf.expand_dims(mask, axis=0)
+        mask = tf.expand_dims(mask, axis=-1)
 
-        mask[mask > 0] = 1
-        mask = mask.astype(np.float32)
-        mask = np.nan_to_num(mask)
-        mask = transform.resize(
-            mask, (IMAGE_H, IMAGE_W), order=0, anti_aliasing=False)
-        mask = mask[88:-88, 238:-238]
+        _, h, w, _ = bts.shape
+        rads = tf.image.resize(rads, (h, w))
 
-        msk = np.zeros((1024, 1024, 2))
-        msk[..., 0] = mask
-        msk[..., 1] = 1-mask
+        bts = self._transform_image(bts, PATCH_SIZE)
+        rads = self._transform_image(rads, PATCH_SIZE)
+        mask = self._transform_image(mask, PATCH_SIZE)
+
+        channels = tf.concat([rads, bts], axis=-1)
+        msk = tf.concat([mask, 1-mask], axis=-1)
 
         yield (channels, msk)
 
+    def _transform_image(self, img, patch_size):
+        b, h, w, c  = img.shape
+        dims = [1, patch_size, patch_size, 1]
+        img = tf.image.central_crop(img, .9)
+        img = tf.image.extract_patches(img, dims, dims, [
+                                       1, 1, 1, 1], padding='VALID')
+        n, nx, ny, np = img.shape
+        img = tf.reshape(img, (n*nx*ny, patch_size, patch_size, c))
+        return img
+
+
     def _generator(self, path):
-        types = ( tf.float32, tf.float32)
-        shapes = (tf.TensorShape( [1024, 1024, 9]), tf.TensorShape([1024,
-            1024, 2]))
+        types = (tf.float32, tf.float32)
+        shapes = (tf.TensorShape([None, PATCH_SIZE, PATCH_SIZE, 9]),
+                  tf.TensorShape([None, PATCH_SIZE, PATCH_SIZE, 2]))
         dataset = tf.data.Dataset.from_generator(self._parse_file,
                                                  output_types=types,
                                                  output_shapes=shapes,
                                                  args=(path, ))
         return dataset
 
-    def _transform(self, img, msk):
-        img = tf.expand_dims(img, axis=0)
-        msk = tf.expand_dims(msk, axis=0)
-
-        dims = [1, PATCH_SIZE, PATCH_SIZE, 1]
-        img = tf.image.extract_patches(img, dims, dims, [
-                                       1, 1, 1, 1], padding='VALID')
-        msk = tf.image.extract_patches(msk, dims, dims, [
-                                       1, 1, 1, 1], padding='VALID')
-
-        n, nx, ny, np = img.shape
-        img = tf.reshape(img, (n*nx*ny, PATCH_SIZE, PATCH_SIZE, 9))
-        msk = tf.reshape(msk, (n*nx*ny, PATCH_SIZE, PATCH_SIZE, 2))
-
-        return img, msk
-
     def train_fn(self):
         """Input function for training"""
         dataset = tf.data.Dataset.from_tensor_slices(self._train_images)
         dataset = dataset.shuffle(1000)
-        dataset = dataset.interleave(self._generator, cycle_length=2)
-        dataset = dataset.map(self._transform)
+        dataset = dataset.interleave(self._generator, cycle_length=2, num_parallel_calls=2)
         dataset = dataset.unbatch()
-        dataset = dataset.shuffle(self._batch_size * 3)
+        dataset = dataset.shuffle(self._batch_size * 2)
         dataset = dataset.batch(self._batch_size)
         dataset = dataset.prefetch(self._batch_size)
         # dataset = dataset.cache()
@@ -130,8 +138,7 @@ class Sentinel3Dataset():
 
     def test_fn(self):
         dataset = tf.data.Dataset.from_tensor_slices(self._test_images)
-        dataset = dataset.interleave(self._generator, cycle_length=2)
-        dataset = dataset.map(self._transform)
+        dataset = dataset.interleave(self._generator, cycle_length=2, num_parallel_calls=2)
         dataset = dataset.unbatch()
         dataset = dataset.batch(self._batch_size)
         dataset = dataset.prefetch(self._batch_size)
@@ -140,8 +147,9 @@ class Sentinel3Dataset():
 
 class ImageLoader:
 
-    def __init__(self, path):
+    def __init__(self, path, engine='h5netcdf'):
         self.path = path
+        self._engine = engine
 
     def load_radiances(self, view='an'):
         rads = [
@@ -161,7 +169,7 @@ class ImageLoader:
             file_name = os.path.join(
                 self.path, 'S{}_quality_{}.nc'.format(
                     i, view))
-            irradiance = xr.open_dataset(file_name, engine='h5netcdf')[name][:].data[0]
+            irradiance = xr.open_dataset(file_name, engine=self._engine)[name][:].data[0]
             irradiances[name] = irradiance
         return irradiances
 
@@ -216,7 +224,7 @@ class ImageLoader:
             path, 'S{}_radiance_{}.nc'.format(
                 channel_num, view))
         radiance = xr.open_dataset(
-            path, decode_times=False, engine='h5netcdf', drop_variables=excluded_vars)
+            path, decode_times=False, engine=self._engine, drop_variables=excluded_vars)
         return radiance
 
     def load_bts(self, view='in'):
@@ -232,7 +240,7 @@ class ImageLoader:
         ]
 
         path = os.path.join(path, 'S{}_BT_{}.nc'.format(channel_num, view))
-        bt = xr.open_dataset(path, decode_times=False, engine='h5netcdf',
+        bt = xr.open_dataset(path, decode_times=False, engine=self._engine,
                              drop_variables=excluded_vars)
         return bt
 
@@ -245,7 +253,7 @@ class ImageLoader:
             'cloud_orphan_in',
             'bayes_orphan_in',
             'probability_cloud_dual_in']
-        flags = xr.open_dataset(flags_path, decode_times=False, engine='h5netcdf',
+        flags = xr.open_dataset(flags_path, decode_times=False, engine=self._engine,
                                 drop_variables=excluded)
 
         flag_masks = flags.confidence_in.attrs['flag_masks']
@@ -262,12 +270,12 @@ class ImageLoader:
 
     def load_geometry(self):
         path = os.path.join(self.path, 'geometry_tn.nc')
-        geo = xr.open_dataset(path, decode_times=False, engine='h5netcdf')
+        geo = xr.open_dataset(path, decode_times=False, engine=self._engine)
         return geo
 
     def load_met(self):
         met_path = os.path.join(self.path, 'met_tx.nc')
-        met = xr.open_dataset(met_path, decode_times=False, engine='h5netcdf')
+        met = xr.open_dataset(met_path, decode_times=False, engine=self._engine)
         met = met[['total_column_water_vapour_tx', 'cloud_fraction_tx',
                    'skin_temperature_tx', 'sea_surface_temperature_tx',
                    'total_column_ozone_tx', 'soil_wetness_tx',
@@ -280,6 +288,6 @@ class ImageLoader:
         flags_path = os.path.join(self.path, 'geodetic_{}.nc'.format(view))
         excluded = ['elevation_orphan_an', 'elevation_an',
                     'latitude_orphan_an', 'longitude_orphan_an']
-        flags = xr.open_dataset(flags_path, decode_times=False, engine='h5netcdf',
+        flags = xr.open_dataset(flags_path, decode_times=False, engine=self._engine,
                                 drop_variables=excluded)
         return flags

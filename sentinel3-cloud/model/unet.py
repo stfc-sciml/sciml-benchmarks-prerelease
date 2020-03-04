@@ -18,6 +18,7 @@ This module provides a convenient way to create different topologies
 based around UNet.
 
 """
+# import nvtx.plugins.tf as nvtx_tf
 import tensorflow as tf
 from model.layers import output_block, upsample_block, bottleneck, downsample_block, input_block
 
@@ -37,17 +38,27 @@ def unet_v1(input_shape):
 
     skip_connections.append(skip)
 
-    for idx, filters in enumerate([64, 128, 256, 512]):
+    # out, context = nvtx_tf.ops.start(out, message='Encoder',
+    #         domain_name='Forward', grad_domain_name='Gradient')
+
+    for idx, filters in enumerate([128, 256, 512]):
         out, skip = downsample_block(out, filters=filters, idx=idx)
         skip_connections.append(skip)
 
+    # out, nvtx_tf.ops.end(out, context)
+    # out, context = nvtx_tf.ops.start(out, message='Bottleneck',
+    #         domain_name='Forward', grad_domain_name='Gradient')
     out = bottleneck(out, filters=1024)
+    # out, nvtx_tf.ops.end(out, context)
 
-    for idx, filters in enumerate([512, 256, 128, 64]):
+    # out, context = nvtx_tf.ops.start(out, message='Decoder',
+    #         domain_name='Forward', grad_domain_name='Gradient')
+    for idx, filters in enumerate([512, 256, 128]):
         out = upsample_block(out,
                              residual_input=skip_connections.pop(),
                              filters=filters,
                              idx=idx)
+    # out, nvtx_tf.ops.end(out, context)
 
     out = output_block(out, residual_input=skip_connections.pop(), filters=64, n_classes=2)
     return tf.keras.Model(inputs, out)
