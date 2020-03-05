@@ -1,1 +1,0 @@
-{"train": {"warmup_avg_ips": 2.816056797806298, "warmup_duration": 10127.411553144455, "avg_ips": 101.09024390287396, "total_duration": 13551.245130062103}, "test": {"warmup_avg_ips": 0, "warmup_duration": 0.005864381790161133, "avg_ips": 1.214563987908843, "total_duration": 2474.3533279895782}}
