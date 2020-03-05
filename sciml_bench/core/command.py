@@ -3,6 +3,7 @@ import yaml
 import click
 import click_config_file
 
+import sciml_bench.dms_classifier.main as dms_classifier_mod
 import sciml_bench.em_denoise.main as em_denoise_mod
 import sciml_bench.slstr_cloud.main as slstr_cloud_mod
 
@@ -42,6 +43,17 @@ def cli(ctx, **kwargs):
     ctx.obj.update(kwargs)
     set_environment_variables(**kwargs)
 
+@cli.command(help='Run the DMS Classifier Benchmark')
+@click_config_file.configuration_option(provider=yaml_provider, implicit=False)
+@click.pass_context
+@click.argument('data_dir')
+@click.argument('model_dir')
+@click.option('--epochs', default=50, help='Set number of epochs')
+@click.option('--batch_size', default=32, help='Set the batch size for training & test')
+@click.option('--learning-rate', default=1e-4, help='Set the learning rate')
+def dms_classifier(ctx, **kwargs):
+    kwargs.update(ctx.obj)
+    dms_classifier_mod.main(**kwargs)
 
 @cli.command(help='Run the Electron Microscopy Denoise Benchmark')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
