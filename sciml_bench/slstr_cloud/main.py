@@ -1,46 +1,14 @@
-import os
 import tensorflow as tf
 
 from sciml_bench.core.dllogger.logger import LOGGER
 from sciml_bench.core.utils.benchmark import Benchmark
-from sciml_bench.core.utils.cmd_util import PARSER, _cmd_params
 
 from sciml_bench.slstr_cloud.model.unet import unet_v1
 from sciml_bench.slstr_cloud.constants import PATCH_SIZE
 from sciml_bench.slstr_cloud.data_loader import Sentinel3Dataset
 
 
-def set_environment_variables(use_amp=False, **kwargs):
-    # Optimization flags
-    os.environ['CUDA_CACHE_DISABLE'] = '0'
-
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-
-    os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
-
-    os.environ['TF_USE_CUDNN_BATCHNORM_SPATIAL_PERSISTENT'] = '1'
-
-    os.environ['TF_ADJUST_HUE_FUSED'] = 'data'
-    os.environ['TF_ADJUST_SATURATION_FUSED'] = 'data'
-    os.environ['TF_ENABLE_WINOGRAD_NONFUSED'] = 'data'
-
-    os.environ['TF_SYNC_ON_FINISH'] = '0'
-    os.environ['TF_AUTOTUNE_THRESHOLD'] = '2'
-
-    if use_amp:
-        os.environ['TF_ENABLE_AUTO_MIXED_PRECISION'] = '1'
-
-
-def main():
-    """
-    Starting point of the application
-    """
-
-    flags = PARSER.parse_args()
-    params = _cmd_params(flags)
-
-    set_environment_variables(**params)
-
+def main(**params):
     strategy = tf.distribute.MirroredStrategy()
     num_replicas = strategy.num_replicas_in_sync
 
@@ -53,7 +21,7 @@ def main():
 
     with strategy.scope():
         model = unet_v1((PATCH_SIZE, PATCH_SIZE, 9))
-        model.compile(optimizer='adam', lr=params['learning_rate'],
+        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=params['learning_rate']),
                       loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
                       metrics=[
                           'accuracy',
@@ -76,6 +44,3 @@ def main():
         benchmark.predict(params)
 
     benchmark.save_results(params['model_dir'])
-
-if __name__ == '__main__':
-    main()

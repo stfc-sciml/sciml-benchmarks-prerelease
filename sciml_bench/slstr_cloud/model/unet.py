@@ -20,7 +20,7 @@ based around UNet.
 """
 # import nvtx.plugins.tf as nvtx_tf
 import tensorflow as tf
-from model.layers import output_block, upsample_block, bottleneck, downsample_block, input_block
+from sciml_bench.slstr_cloud.model.layers import output_block, upsample_block, bottleneck, downsample_block, input_block
 
 
 def unet_v1(input_shape):

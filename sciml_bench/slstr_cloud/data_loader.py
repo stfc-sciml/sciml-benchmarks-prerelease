@@ -20,7 +20,7 @@ import tensorflow as tf
 import numpy as np
 import xarray as xr
 from scipy import interpolate
-from utils.constants import PATCH_SIZE, PATCHES_PER_IMAGE
+from sciml_bench.slstr_cloud.constants import PATCH_SIZE, PATCHES_PER_IMAGE
 
 class Sentinel3Dataset():
     """Load, separate and prepare the data for training and prediction"""

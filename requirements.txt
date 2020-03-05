@@ -1,9 +1,12 @@
-numpy==1.17.0
+numpy>=1.17.0
 Pillow==6.2.0
 pandas
 h5netcdf
 xarray
 scikit-image
+pyyaml
 pytest
 pytest-benchmark
 nvtx-plugins
+click
+click-config-file

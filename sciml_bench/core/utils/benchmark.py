@@ -1,9 +1,9 @@
 import json
 import tensorflow as tf
 from pathlib import Path
-from dllogger import tags
-from dllogger.logger import LOGGER
-from utils.hooks.profiling_hook import ProfilingHook
+
+from sciml_bench.core.dllogger import tags, LOGGER
+from sciml_bench.core.utils.hooks.profiling_hook import ProfilingHook
 
 class Benchmark:
 

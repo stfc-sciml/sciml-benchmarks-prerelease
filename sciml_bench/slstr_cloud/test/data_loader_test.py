@@ -2,8 +2,9 @@ import tensorflow as tf
 import numpy as np
 import pytest
 from pathlib import Path
-from utils.data_loader import Sentinel3Dataset, ImageLoader
-from utils.constants import PATCH_SIZE
+
+from sciml_bench.slstr_cloud.data_loader import Sentinel3Dataset
+from sciml_bench.slstr_cloud.constants import PATCH_SIZE
 
 def test_sentinel3_dataset_train_fn():
     path = Path("dataset")
