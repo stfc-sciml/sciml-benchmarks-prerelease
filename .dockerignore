@@ -1,4 +1,6 @@
-dataset
+.git
+*.egg-info
+data
 results
 pearl1
 pearl2

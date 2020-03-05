@@ -35,6 +35,7 @@ class EMGrapheneDataset:
         dataset = tf.data.Dataset.from_tensor_slices((self._noise_train, self._clean_train))
         dataset = dataset.shuffle(self.train_size)
         dataset = dataset.batch(self._batch_size)
+        dataset = dataset.repeat()
         return dataset
 
     def test_fn(self):

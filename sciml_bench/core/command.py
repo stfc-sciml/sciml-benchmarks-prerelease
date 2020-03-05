@@ -44,7 +44,7 @@ def cli(ctx, **kwargs):
 
 
 @cli.command(help='Run the Electron Microscopy Denoise Benchmark')
-@click_config_file.configuration_option(provider=yaml_provider)
+@click_config_file.configuration_option(provider=yaml_provider, implicit=False)
 @click.pass_context
 @click.argument('data_dir')
 @click.argument('model_dir')
@@ -57,7 +57,7 @@ def em_denoise(ctx, **kwargs):
 
 
 @cli.command(help='Run the SLSTR Cloud Segmentation Benchmark')
-@click_config_file.configuration_option(provider=yaml_provider)
+@click_config_file.configuration_option(provider=yaml_provider, implicit=False)
 @click.pass_context
 @click.argument('data_dir')
 @click.argument('model_dir')
