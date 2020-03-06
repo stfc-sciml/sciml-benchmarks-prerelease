@@ -1,0 +1,4 @@
+lr-scaling: 'linear'
+epochs: 30
+batch_size: 8
+learning-rate: 0.001
