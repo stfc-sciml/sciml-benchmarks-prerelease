@@ -7,12 +7,16 @@ from sciml_bench.dms_classifier.data_loader import DMSDataset
 from sciml_bench.dms_classifier.constants import IMG_HEIGHT, IMG_WIDTH
 from sciml_bench.dms_classifier.model import small_cnn_classifier
 
+
 def main(**params):
     strategy = tf.distribute.MirroredStrategy()
     num_replicas = strategy.num_replicas_in_sync
 
     params['num_replicas'] = num_replicas
     params['global_batch_size'] = params['batch_size'] * num_replicas
+
+    if params['lr_scaling'] == 'linear':
+        params['learning_rate'] *= num_replicas
 
     LOGGER.log('Number of Replicas: {}'.format(params['num_replicas']))
     LOGGER.log('Global Batch Size: {}'.format(params['global_batch_size']))

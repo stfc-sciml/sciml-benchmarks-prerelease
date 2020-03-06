@@ -35,6 +35,7 @@ def set_environment_variables(use_amp=False, **kwargs):
 
 @click.group()
 @click.pass_context
+@click.option('--lr-scaling', default='none', type=click.Choice(['linear', 'none']), help='How to scale the learning rate at larger batch sizes')
 @click.option('--use-amp', default=False, is_flag=True, help='Enable Automatic Mixed Precision')
 @click.option('--exec-mode', default='train_and_predict', type=click.Choice(['train', 'train_and_predict', 'predict']), help='Set the execution mode')
 @click.option('--seed', default=42, type=int, help='Random seed to use for initialization of random state')
@@ -66,7 +67,6 @@ def dms_classifier(ctx, **kwargs):
 def em_denoise(ctx, **kwargs):
     kwargs.update(ctx.obj)
     em_denoise_mod.main(**kwargs)
-
 
 @cli.command(help='Run the SLSTR Cloud Segmentation Benchmark')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)

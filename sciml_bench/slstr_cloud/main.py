@@ -15,6 +15,9 @@ def main(**params):
     params['num_replicas'] = num_replicas
     params['global_batch_size'] = params['batch_size'] * num_replicas
 
+    if params['lr_scaling'] == 'linear':
+        params['learning_rate'] *= num_replicas
+
     LOGGER.log('Number of Replicas: {}'.format(params['num_replicas']))
     LOGGER.log('Global Batch Size: {}'.format(params['global_batch_size']))
     LOGGER.log('Replica Batch Size: {}'.format(params['batch_size']))

@@ -46,7 +46,7 @@ class Benchmark:
 
     def predict(self, params):
         test_profiler_hook = ProfilingHook(params['batch_size'],
-                                           warmup_steps=2, num_replicas=params['num_replicas'])
+                                           warmup_steps=5, num_replicas=params['num_replicas'])
         hooks = [test_profiler_hook]
 
         predict_steps = self._dataset.test_size / params['global_batch_size']
