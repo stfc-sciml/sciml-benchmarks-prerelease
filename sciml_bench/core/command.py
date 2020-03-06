@@ -6,6 +6,7 @@ import click_config_file
 import sciml_bench.dms_classifier.main as dms_classifier_mod
 import sciml_bench.em_denoise.main as em_denoise_mod
 import sciml_bench.slstr_cloud.main as slstr_cloud_mod
+from sciml_bench.core.download import download_datasets
 
 def yaml_provider(file_path, cmd_name):
     with open(file_path) as config_data:
@@ -79,6 +80,13 @@ def em_denoise(ctx, **kwargs):
 def slstr_cloud(ctx, **kwargs):
     kwargs.update(ctx.obj)
     slstr_cloud_mod.main(**kwargs)
+
+@cli.command(help='Download benchmark datasets from remote store')
+@click.argument('name', type=click.Choice(['all', 'em_denoise', 'dms_classifier', 'slstr_cloud']))
+@click.argument('user', type=str)
+@click.argument('destination')
+def download(*args, **kwargs):
+    download_datasets(*args, **kwargs)
 
 
 if __name__ == "__main__":

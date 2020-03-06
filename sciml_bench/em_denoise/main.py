@@ -6,16 +6,14 @@ from sciml_bench.core.utils.benchmark import Benchmark
 from sciml_bench.em_denoise.data_loader import EMGrapheneDataset
 from sciml_bench.em_denoise.constants import IMG_SIZE
 from sciml_bench.em_denoise.model import autoencoder
+from sciml_bench.core.utils.runner import setup_run
 
 def main(**params):
     strategy = tf.distribute.MirroredStrategy()
     num_replicas = strategy.num_replicas_in_sync
 
     params['num_replicas'] = num_replicas
-    params['global_batch_size'] = params['batch_size'] * num_replicas
-
-    if params['lr_scaling'] == 'linear':
-        params['learning_rate'] *= num_replicas
+    params = setup_run(**params)
 
     LOGGER.log('Number of Replicas: {}'.format(params['num_replicas']))
     LOGGER.log('Global Batch Size: {}'.format(params['global_batch_size']))
@@ -37,4 +35,4 @@ def main(**params):
     if 'predict' in params['exec_mode']:
         benchmark.predict(params)
 
-    benchmark.save_results(params['model_dir'])
+    benchmark.save_results(params)

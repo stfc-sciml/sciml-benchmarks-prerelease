@@ -10,4 +10,4 @@ WORKDIR /workspace/
 
 RUN pip install -e . 
 
-CMD sciml_bench
+CMD sciml-bench

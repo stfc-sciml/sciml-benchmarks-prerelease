@@ -6,17 +6,15 @@ from sciml_bench.core.utils.benchmark import Benchmark
 from sciml_bench.slstr_cloud.model.unet import unet_v1
 from sciml_bench.slstr_cloud.constants import PATCH_SIZE
 from sciml_bench.slstr_cloud.data_loader import Sentinel3Dataset
+from sciml_bench.core.utils.runner import setup_run
 
 
 def main(**params):
     strategy = tf.distribute.MirroredStrategy()
     num_replicas = strategy.num_replicas_in_sync
 
-    params['num_replicas'] = num_replicas
-    params['global_batch_size'] = params['batch_size'] * num_replicas
-
-    if params['lr_scaling'] == 'linear':
-        params['learning_rate'] *= num_replicas
+    params['num_replicas' ] = num_replicas
+    params = setup_run(**params)
 
     LOGGER.log('Number of Replicas: {}'.format(params['num_replicas']))
     LOGGER.log('Global Batch Size: {}'.format(params['global_batch_size']))
@@ -28,10 +26,6 @@ def main(**params):
                       loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
                       metrics=[
                           'accuracy',
-                          # tf.keras.metrics.TruePositives(),
-                          # tf.keras.metrics.TrueNegatives(),
-                          # tf.keras.metrics.FalsePositives(),
-                          # tf.keras.metrics.FalseNegatives()
                       ])
 
     dataset = Sentinel3Dataset(data_dir=params['data_dir'],
@@ -46,4 +40,4 @@ def main(**params):
     if 'predict' in params['exec_mode']:
         benchmark.predict(params)
 
-    benchmark.save_results(params['model_dir'])
+    benchmark.save_results(params)

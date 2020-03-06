@@ -1,4 +1,4 @@
-import json
+import yaml
 import tensorflow as tf
 from pathlib import Path
 
@@ -26,7 +26,6 @@ class Benchmark:
         log_file = Path(params['model_dir']).joinpath('training.log')
         csv_logger = tf.keras.callbacks.CSVLogger(log_file)
         hooks.append(csv_logger)
-
 
         LOGGER.log('Begin Training...')
         LOGGER.log('Training for {} epochs'.format(params['epochs']))
@@ -57,6 +56,8 @@ class Benchmark:
 
         dataset = self._dataset.test_fn()
         metrics = self._model.evaluate(dataset, steps=predict_steps, callbacks=hooks)
+        # Handle special case: only metric is the loss
+        metrics = metrics if isinstance(metrics, list) else [metrics]
         metrics = {name: float(value) for name, value in zip(self._model.metrics_names, metrics)}
 
         LOGGER.log(tags.RUN_STOP)
@@ -65,11 +66,19 @@ class Benchmark:
         self._results['test'] = test_profiler_hook.get_results()
         self._results['test'].update(metrics)
 
-    def save_results(self, model_dir):
-        results_file = Path(model_dir).joinpath('results.json')
+    def save_results(self, params):
+        model_dir = params['model_dir']
+        results_file = Path(model_dir).joinpath('results.yml')
+
         with results_file.open('w') as handle:
-            json.dump(self._results, handle)
+            yaml.dump(self._results, handle)
+
+        params_file = Path(model_dir).joinpath('params.yml')
+        with params_file.open('w') as handle:
+            yaml.dump(params, handle)
 
         weights_file = str(Path(model_dir).joinpath('final_weights'))
         self._model.save_weights(weights_file)
+
+
 
