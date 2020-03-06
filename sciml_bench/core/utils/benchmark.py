@@ -7,12 +7,20 @@ from sciml_bench.core.utils.hooks.profiling_hook import ProfilingHook
 
 class Benchmark:
 
-    def __init__(self, model, dataset):
-        self._model = model
+    def __init__(self, model_fn, dataset):
+        self._model = None
+        self._model_fn = model_fn
         self._dataset = dataset
         self._results = {}
 
-    def train(self, params):
+    def build(self, **params):
+        self._model = self._model_fn(self._dataset.dimensions, **params)
+
+    def train(self, epochs=1, **params):
+        if self._model is None:
+            raise RuntimeError("Model has not been built!\n \
+                    Please call benchmark.build() first to compile the model!")
+
         spe = self._dataset.train_size / params['global_batch_size']
 
         hooks = []
@@ -28,22 +36,26 @@ class Benchmark:
         hooks.append(csv_logger)
 
         LOGGER.log('Begin Training...')
-        LOGGER.log('Training for {} epochs'.format(params['epochs']))
+        LOGGER.log('Training for {} epochs'.format(epochs))
         LOGGER.log('Epoch contains {} steps'.format(spe))
 
-        dataset = self._dataset.train_fn()
+        dataset = self._dataset.train_fn(params['global_batch_size'])
 
         LOGGER.log(tags.RUN_START)
         self._model.fit(
             dataset,
-            epochs=params['epochs'],
+            epochs=epochs,
             steps_per_epoch=spe,
             callbacks=hooks)
         LOGGER.log(tags.RUN_STOP)
 
         self._results['train'] = train_profiler_hook.get_results()
 
-    def predict(self, params):
+    def predict(self, **params):
+        if self._model is None:
+            raise RuntimeError("Model has not been built!\n \
+                    Please call benchmark.build() first to compile the model!")
+
         test_profiler_hook = ProfilingHook(params['batch_size'],
                                            warmup_steps=5, num_replicas=params['num_replicas'])
         hooks = [test_profiler_hook]
@@ -54,7 +66,7 @@ class Benchmark:
         LOGGER.log('Predicting for {} steps'.format(predict_steps))
         LOGGER.log(tags.RUN_START)
 
-        dataset = self._dataset.test_fn()
+        dataset = self._dataset.test_fn(params['global_batch_size'])
         metrics = self._model.evaluate(dataset, steps=predict_steps, callbacks=hooks)
         # Handle special case: only metric is the loss
         metrics = metrics if isinstance(metrics, list) else [metrics]
@@ -66,7 +78,7 @@ class Benchmark:
         self._results['test'] = test_profiler_hook.get_results()
         self._results['test'].update(metrics)
 
-    def save_results(self, params):
+    def save_results(self, **params):
         model_dir = params['model_dir']
         results_file = Path(model_dir).joinpath('results.yml')
 

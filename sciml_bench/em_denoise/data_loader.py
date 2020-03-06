@@ -5,8 +5,7 @@ from sciml_bench.em_denoise.constants import IMG_SIZE
 
 class EMGrapheneDataset:
 
-    def __init__(self, data_dir, batch_size=10, seed=None):
-        self._batch_size = batch_size
+    def __init__(self, data_dir, seed=None):
         self._seed = seed
 
         data_dir = Path(data_dir)
@@ -31,14 +30,14 @@ class EMGrapheneDataset:
     def test_size(self):
         return len(self._clean_test)
 
-    def train_fn(self):
+    def train_fn(self, batch_size=10):
         dataset = tf.data.Dataset.from_tensor_slices((self._noise_train, self._clean_train))
         dataset = dataset.shuffle(self.train_size)
-        dataset = dataset.batch(self._batch_size)
+        dataset = dataset.batch(batch_size)
         dataset = dataset.repeat()
         return dataset
 
-    def test_fn(self):
+    def test_fn(self, batch_size=10):
         dataset = tf.data.Dataset.from_tensor_slices((self._noise_test, self._clean_test))
-        dataset = dataset.batch(self._batch_size)
+        dataset = dataset.batch(batch_size)
         return dataset

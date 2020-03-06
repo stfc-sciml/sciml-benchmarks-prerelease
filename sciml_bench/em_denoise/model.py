@@ -1,9 +1,9 @@
 import tensorflow as tf
 
-def autoencoder(img_height, img_width, n_channels=1):
+def autoencoder(input_shape, **params):
     skip_layers = []
 
-    input_layer = tf.keras.layers.Input((img_height, img_width, n_channels))
+    input_layer = tf.keras.layers.Input(input_shape)
     x = input_layer
     x = tf.keras.layers.Conv2D(filters=8, kernel_size=3, activation='relu', padding='same')(x)
     x = tf.keras.layers.BatchNormalization()(x)
@@ -55,4 +55,5 @@ def autoencoder(img_height, img_width, n_channels=1):
     x = tf.keras.layers.Conv2D(filters=1, kernel_size=3, activation='linear', padding='same')(x)
 
     model = tf.keras.models.Model(input_layer, x)
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=params['learning_rate']), loss='mse')
     return model

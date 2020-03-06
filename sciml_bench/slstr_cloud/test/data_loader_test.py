@@ -7,8 +7,8 @@ from sciml_bench.slstr_cloud.data_loader import Sentinel3Dataset
 from sciml_bench.slstr_cloud.constants import PATCH_SIZE
 
 def test_sentinel3_dataset_train_fn():
-    path = Path("dataset")
-    dataset = Sentinel3Dataset(path, batch_size=2).train_fn()
+    path = Path("data/slstr_cloud")
+    dataset = Sentinel3Dataset(path).train_fn(batch_size=2)
     batch = next(dataset.as_numpy_iterator())
     img, msk = batch
 
@@ -34,8 +34,8 @@ def test_sentinel3_dataset_train_fn():
     assert msk.min() == 0
 
 def test_sentinel3_dataset_test_fn():
-    path = Path("dataset")
-    dataset = Sentinel3Dataset(path, batch_size=2).test_fn()
+    path = Path("data/slstr_cloud")
+    dataset = Sentinel3Dataset(path).test_fn(batch_size=2)
     batch = next(dataset.as_numpy_iterator())
     img, msk = batch
 
@@ -62,9 +62,9 @@ def test_sentinel3_dataset_test_fn():
     warmup=False
 )
 def test_sentinel3_dataset_load_data(benchmark):
-    path = next(Path("dataset/train").glob('S3A*'))
+    path = next(Path("data/slstr_cloud/train").glob('S3A*'))
     path = str(path)
-    dataset = Sentinel3Dataset(Path('dataset'), batch_size=16)
+    dataset = Sentinel3Dataset(Path('data/slstr_cloud'))
 
     benchmark(dataset._load_data, path)
 
@@ -75,8 +75,8 @@ def test_sentinel3_dataset_load_data(benchmark):
     warmup=False
 )
 def test_sentinel3_dataset_parse_file(benchmark):
-    path = next(Path("dataset/train").glob('S3A*'))
+    path = next(Path("data/slstr_cloud/train").glob('S3A*'))
     path = str.encode(str(path))
-    dataset = Sentinel3Dataset(Path('dataset'), batch_size=16)
+    dataset = Sentinel3Dataset(Path('data/slstr_cloud'))
 
     benchmark(lambda x: next(dataset._parse_file(x)), path)

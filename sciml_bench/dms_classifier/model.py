@@ -1,13 +1,13 @@
 import tensorflow as tf
 
-def small_cnn_classifier(img_height, img_width, n_channels=3, n_classes=2, dropout=0.):
+def small_cnn_classifier(input_shape, n_classes=2, dropout=0., **params):
     """
     A very basic setup of a small CNN for testing on classification problems
     """
     model = tf.keras.Sequential()
     model.add(tf.keras.layers.Conv2D(8, kernel_size=(4, 4),
                      activation='relu',
-                     input_shape=(img_width, img_height, 3)))
+                     input_shape=input_shape))
     model.add(tf.keras.layers.MaxPooling2D(pool_size=(2, 2)))
     model.add(tf.keras.layers.BatchNormalization())
     model.add(tf.keras.layers.Conv2D(16, kernel_size=(2, 2), activation='relu'))
@@ -26,5 +26,7 @@ def small_cnn_classifier(img_height, img_width, n_channels=3, n_classes=2, dropo
         model.add(tf.keras.layers.BatchNormalization())
     model.add(tf.keras.layers.Dense(n_classes, activation='sigmoid'))
 
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=params['learning_rate']),
+                loss='binary_crossentropy', metrics=['accuracy'])
     return model
 

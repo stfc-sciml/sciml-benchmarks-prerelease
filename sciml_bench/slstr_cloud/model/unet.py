@@ -23,7 +23,7 @@ import tensorflow as tf
 from sciml_bench.slstr_cloud.model.layers import output_block, upsample_block, bottleneck, downsample_block, input_block
 
 
-def unet_v1(input_shape):
+def unet_v1(input_shape, **params):
     """ U-Net: Convolutional Networks for Biomedical Image Segmentation
 
     Source:
@@ -61,4 +61,11 @@ def unet_v1(input_shape):
     # out, nvtx_tf.ops.end(out, context)
 
     out = output_block(out, residual_input=skip_connections.pop(), filters=64, n_classes=2)
-    return tf.keras.Model(inputs, out)
+    model = tf.keras.Model(inputs, out)
+
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=params['learning_rate']),
+                  loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+                  metrics=[
+                      'accuracy',
+                  ])
+    return model

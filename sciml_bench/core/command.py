@@ -2,6 +2,7 @@ import os
 import yaml
 import click
 import click_config_file
+from pathlib import Path
 
 import sciml_bench.dms_classifier.main as dms_classifier_mod
 import sciml_bench.em_denoise.main as em_denoise_mod
@@ -55,6 +56,7 @@ def cli(ctx, **kwargs):
 @click.option('--learning-rate', default=1e-4, help='Set the learning rate')
 def dms_classifier(ctx, **kwargs):
     kwargs.update(ctx.obj)
+    kwargs['model_dir'] = Path(kwargs['model_dir']) / 'dms_classifier'
     dms_classifier_mod.main(**kwargs)
 
 @cli.command(help='Run the Electron Microscopy Denoise Benchmark')
@@ -67,6 +69,7 @@ def dms_classifier(ctx, **kwargs):
 @click.option('--learning-rate', default=0.01, help='Set the learning rate')
 def em_denoise(ctx, **kwargs):
     kwargs.update(ctx.obj)
+    kwargs['model_dir'] = Path(kwargs['model_dir']) / 'em_denoise'
     em_denoise_mod.main(**kwargs)
 
 @cli.command(help='Run the SLSTR Cloud Segmentation Benchmark')
@@ -79,6 +82,7 @@ def em_denoise(ctx, **kwargs):
 @click.option('--learning-rate', default=0.001, help='Set the learning rate')
 def slstr_cloud(ctx, **kwargs):
     kwargs.update(ctx.obj)
+    kwargs['model_dir'] = Path(kwargs['model_dir']) / 'slstr_cloud'
     slstr_cloud_mod.main(**kwargs)
 
 @cli.command(help='Download benchmark datasets from remote store')

@@ -6,8 +6,7 @@ from sciml_bench.dms_classifier.constants import IMG_HEIGHT, IMG_WIDTH, N_CHANNE
 
 class DMSDataset:
 
-    def __init__(self, data_dir, batch_size=10, seed=None):
-        self._batch_size = batch_size
+    def __init__(self, data_dir, seed=None):
         self._seed = seed
 
         data_dir = Path(data_dir)
@@ -34,14 +33,14 @@ class DMSDataset:
     def test_size(self):
         return len(self._test_images)
 
-    def train_fn(self):
+    def train_fn(self, batch_size=10):
         dataset = tf.data.Dataset.from_tensor_slices((self._train_images, self._train_labels))
         dataset = dataset.shuffle(self.train_size)
-        dataset = dataset.batch(self._batch_size)
+        dataset = dataset.batch(batch_size)
         dataset = dataset.repeat()
         return dataset
 
-    def test_fn(self):
+    def test_fn(self, batch_size=10):
         dataset = tf.data.Dataset.from_tensor_slices((self._test_images, self._test_labels))
-        dataset = dataset.batch(self._batch_size)
+        dataset = dataset.batch(batch_size)
         return dataset

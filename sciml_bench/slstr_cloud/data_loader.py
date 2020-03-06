@@ -25,9 +25,8 @@ from sciml_bench.slstr_cloud.constants import PATCH_SIZE, PATCHES_PER_IMAGE
 class Sentinel3Dataset():
     """Load, separate and prepare the data for training and prediction"""
 
-    def __init__(self, data_dir, batch_size, seed=0):
+    def __init__(self, data_dir, seed=0):
         self._data_dir = data_dir
-        self._batch_size = batch_size
 
         self._train_images = Path(self._data_dir).joinpath('train').glob('S3A*')
         self._train_images = list(map(str, self._train_images))
@@ -123,25 +122,25 @@ class Sentinel3Dataset():
                                                  args=(path, ))
         return dataset
 
-    def train_fn(self):
+    def train_fn(self, batch_size=8):
         """Input function for training"""
         dataset = tf.data.Dataset.from_tensor_slices(self._train_images)
         dataset = dataset.shuffle(1000)
         dataset = dataset.interleave(self._generator, cycle_length=2, num_parallel_calls=2)
         dataset = dataset.unbatch()
-        dataset = dataset.shuffle(self._batch_size * 2)
-        dataset = dataset.batch(self._batch_size)
-        dataset = dataset.prefetch(self._batch_size)
-        # dataset = dataset.cache()
+        dataset = dataset.shuffle(batch_size * 2)
+        dataset = dataset.batch(batch_size)
+        dataset = dataset.prefetch(batch_size)
+        dataset = dataset.cache()
         dataset = dataset.repeat()
         return dataset
 
-    def test_fn(self):
+    def test_fn(self, batch_size=8):
         dataset = tf.data.Dataset.from_tensor_slices(self._test_images)
         dataset = dataset.interleave(self._generator, cycle_length=2, num_parallel_calls=2)
         dataset = dataset.unbatch()
-        dataset = dataset.batch(self._batch_size)
-        dataset = dataset.prefetch(self._batch_size)
+        dataset = dataset.batch(batch_size)
+        dataset = dataset.prefetch(batch_size)
         return dataset
 
 

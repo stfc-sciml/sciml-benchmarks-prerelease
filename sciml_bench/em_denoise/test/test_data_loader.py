@@ -5,7 +5,7 @@ from sciml_bench.em_denoise.data_loader import EMGrapheneDataset
 
 @pytest.fixture(scope='module')
 def data_loader():
-    data_dir = Path('sciml_bench/em_denoise/dataset')
+    data_dir = Path('data/em_denoise')
     data_loader = EMGrapheneDataset(data_dir)
     return data_loader
 
