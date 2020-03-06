@@ -87,8 +87,8 @@ def slstr_cloud(ctx, **kwargs):
 
 @cli.command(help='Download benchmark datasets from remote store')
 @click.argument('name', type=click.Choice(['all', 'em_denoise', 'dms_classifier', 'slstr_cloud']))
-@click.argument('user', type=str)
 @click.argument('destination')
+@click.option('--user', default=None, help='Username to use to login to remote data store')
 def download(*args, **kwargs):
     download_datasets(*args, **kwargs)
 
