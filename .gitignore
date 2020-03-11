@@ -138,4 +138,5 @@ tags
 data
 results
 *.sif
-/pearl
+pearl
+pearl-dev

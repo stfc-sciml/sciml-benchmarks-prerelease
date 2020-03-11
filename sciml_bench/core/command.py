@@ -14,7 +14,7 @@ def yaml_provider(file_path, cmd_name):
         cfg = yaml.load(config_data, yaml.SafeLoader)
         return cfg
 
-def set_environment_variables(use_amp=False, **kwargs):
+def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
     # Optimization flags
     os.environ['CUDA_CACHE_DISABLE'] = '0'
 
@@ -30,6 +30,8 @@ def set_environment_variables(use_amp=False, **kwargs):
 
     os.environ['TF_SYNC_ON_FINISH'] = '0'
     os.environ['TF_AUTOTUNE_THRESHOLD'] = '2'
+    if cpu_only:
+        os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
     if use_amp:
         os.environ['TF_ENABLE_AUTO_MIXED_PRECISION'] = '1'
@@ -38,6 +40,7 @@ def set_environment_variables(use_amp=False, **kwargs):
 @click.group()
 @click.pass_context
 @click.option('--lr-scaling', default='none', type=click.Choice(['linear', 'none']), help='How to scale the learning rate at larger batch sizes')
+@click.option('--cpu-only', default=False, is_flag=True, help='Disable GPU execution')
 @click.option('--use-amp', default=False, is_flag=True, help='Enable Automatic Mixed Precision')
 @click.option('--exec-mode', default='train_and_predict', type=click.Choice(['train', 'train_and_predict', 'predict']), help='Set the execution mode')
 @click.option('--seed', default=42, type=int, help='Random seed to use for initialization of random state')

@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-def small_cnn_classifier(input_shape, n_classes=2, dropout=0., **params):
+def small_cnn_classifier(input_shape, dropout=0., **params):
     """
     A very basic setup of a small CNN for testing on classification problems
     """
@@ -24,7 +24,7 @@ def small_cnn_classifier(input_shape, n_classes=2, dropout=0., **params):
         model.add(tf.keras.layers.Dropout(dropout))
     else:
         model.add(tf.keras.layers.BatchNormalization())
-    model.add(tf.keras.layers.Dense(n_classes, activation='sigmoid'))
+    model.add(tf.keras.layers.Dense(1, activation='sigmoid'))
 
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=params['learning_rate']),
                 loss='binary_crossentropy', metrics=['accuracy'])

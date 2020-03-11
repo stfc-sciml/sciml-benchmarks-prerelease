@@ -37,6 +37,10 @@ class Sentinel3Dataset():
         self._seed = seed
 
     @property
+    def dimensions(self):
+        return (PATCH_SIZE, PATCH_SIZE, 9)
+
+    @property
     def train_size(self):
         return len(self._train_images) * PATCHES_PER_IMAGE
 
