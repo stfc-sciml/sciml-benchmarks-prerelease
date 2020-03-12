@@ -132,10 +132,11 @@ class Sentinel3Dataset():
         dataset = dataset.shuffle(1000)
         dataset = dataset.interleave(self._generator, cycle_length=2, num_parallel_calls=2)
         dataset = dataset.unbatch()
-        dataset = dataset.shuffle(batch_size * 2)
+        dataset = dataset.shuffle(batch_size * 3)
         dataset = dataset.batch(batch_size)
-        dataset = dataset.prefetch(batch_size)
-        dataset = dataset.cache()
+        dataset = dataset.prefetch(2)
+        # dataset = dataset.cache()
+        dataset = dataset.take(100)
         dataset = dataset.repeat()
         return dataset
 

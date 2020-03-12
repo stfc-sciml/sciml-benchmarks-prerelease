@@ -1,7 +1,8 @@
 .git
+.dvc
 *.egg-info
 data
 results
-pearl1
-pearl2
+pearl
+pearl-dev
 *.sif
