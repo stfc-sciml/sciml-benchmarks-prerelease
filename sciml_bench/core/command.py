@@ -2,6 +2,8 @@ import os
 import yaml
 import click
 import click_config_file
+import mlflow
+import mlflow.tensorflow
 from pathlib import Path
 
 import sciml_bench.dms_classifier.main as dms_classifier_mod
@@ -15,6 +17,7 @@ def yaml_provider(file_path, cmd_name):
         return cfg
 
 def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
+
     # Optimization flags
     os.environ['CUDA_CACHE_DISABLE'] = '0'
 
@@ -47,6 +50,7 @@ def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
 def cli(ctx, **kwargs):
     ctx.ensure_object(dict)
     ctx.obj.update(kwargs)
+    mlflow.set_tracking_uri('http://dev05.pearl.scd.stfc.ac.uk:5001')
     set_environment_variables(**kwargs)
 
 @cli.command(help='Run the DMS Classifier Benchmark')
@@ -58,9 +62,11 @@ def cli(ctx, **kwargs):
 @click.option('--batch_size', default=32, help='Set the batch size for training & test')
 @click.option('--learning-rate', default=1e-4, help='Set the learning rate')
 def dms_classifier(ctx, **kwargs):
-    kwargs.update(ctx.obj)
-    kwargs['model_dir'] = Path(kwargs['model_dir']) / 'dms_classifier'
-    dms_classifier_mod.main(**kwargs)
+    mlflow.set_experiment('dms_classifier')
+    with mlflow.start_run():
+        kwargs.update(ctx.obj)
+        kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'dms_classifier')
+        dms_classifier_mod.main(**kwargs)
 
 @cli.command(help='Run the Electron Microscopy Denoise Benchmark')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
@@ -71,9 +77,11 @@ def dms_classifier(ctx, **kwargs):
 @click.option('--batch_size', default=10, help='Set the batch size for training & test')
 @click.option('--learning-rate', default=0.01, help='Set the learning rate')
 def em_denoise(ctx, **kwargs):
-    kwargs.update(ctx.obj)
-    kwargs['model_dir'] = Path(kwargs['model_dir']) / 'em_denoise'
-    em_denoise_mod.main(**kwargs)
+    mlflow.set_experiment('em_denoise')
+    with mlflow.start_run():
+        kwargs.update(ctx.obj)
+        kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'em_denoise')
+        em_denoise_mod.main(**kwargs)
 
 @cli.command(help='Run the SLSTR Cloud Segmentation Benchmark')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
@@ -84,9 +92,11 @@ def em_denoise(ctx, **kwargs):
 @click.option('--batch_size', default=8, help='Set the batch size for training & test')
 @click.option('--learning-rate', default=0.001, help='Set the learning rate')
 def slstr_cloud(ctx, **kwargs):
-    kwargs.update(ctx.obj)
-    kwargs['model_dir'] = Path(kwargs['model_dir']) / 'slstr_cloud'
-    slstr_cloud_mod.main(**kwargs)
+    mlflow.set_experiment('slstr_cloud')
+    with mlflow.start_run():
+        kwargs.update(ctx.obj)
+        kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'slstr_cloud')
+        slstr_cloud_mod.main(**kwargs)
 
 @cli.command(help='Download benchmark datasets from remote store')
 @click.argument('name', type=click.Choice(['all', 'em_denoise', 'dms_classifier', 'slstr_cloud']))

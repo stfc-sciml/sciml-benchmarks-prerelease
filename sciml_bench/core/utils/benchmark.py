@@ -1,8 +1,11 @@
 import yaml
 import tensorflow as tf
 from pathlib import Path
+import mlflow.tensorflow
+import mlflow
 
 from sciml_bench.core.dllogger import tags, LOGGER
+from sciml_bench.core.utils.hooks.mlflow import MLFlowCallback
 from sciml_bench.core.utils.hooks.profiling_hook import ProfilingHook
 
 class Benchmark:
@@ -17,6 +20,7 @@ class Benchmark:
         self._model = self._model_fn(self._dataset.dimensions, **params)
 
     def train(self, epochs=1, **params):
+        mlflow.tensorflow.autolog()
         if self._model is None:
             raise RuntimeError("Model has not been built!\n \
                     Please call benchmark.build() first to compile the model!")
@@ -30,6 +34,9 @@ class Benchmark:
                                             spe, num_replicas=params['num_replicas'])
         hooks.append(train_profiler_hook)
 
+        mlf_callback = MLFlowCallback()
+        hooks.append(mlf_callback)
+
         # Add hook for capturing metrics vs. epoch
         log_file = Path(params['model_dir']).joinpath('training.log')
         csv_logger = tf.keras.callbacks.CSVLogger(log_file)
@@ -39,14 +46,17 @@ class Benchmark:
         LOGGER.log('Training for {} epochs'.format(epochs))
         LOGGER.log('Epoch contains {} steps'.format(spe))
 
+
         dataset = self._dataset.train_fn(params['global_batch_size'])
 
         LOGGER.log(tags.RUN_START)
+
         self._model.fit(
             dataset,
             epochs=epochs,
             steps_per_epoch=spe,
             callbacks=hooks)
+
         LOGGER.log(tags.RUN_STOP)
 
         self._results['train'] = train_profiler_hook.get_results()
@@ -58,7 +68,11 @@ class Benchmark:
 
         test_profiler_hook = ProfilingHook(params['batch_size'],
                                            warmup_steps=5, num_replicas=params['num_replicas'])
+
         hooks = [test_profiler_hook]
+
+        mlf_callback = MLFlowCallback()
+        hooks.append(mlf_callback)
 
         predict_steps = self._dataset.test_size / params['global_batch_size']
 
@@ -89,7 +103,7 @@ class Benchmark:
         with params_file.open('w') as handle:
             yaml.dump(params, handle)
 
-        weights_file = str(Path(model_dir).joinpath('final_weights'))
+        weights_file = str(Path(model_dir).joinpath('final_weights.h5'))
         self._model.save_weights(weights_file)
 
 

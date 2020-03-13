@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import time
-
+import mlflow
 import tensorflow as tf
 from sciml_bench.core.dllogger import LOGGER, AverageMeter
 
@@ -46,7 +46,7 @@ class ProfilingHook(tf.keras.callbacks.Callback):
 
         self._t0 = time.time()
 
-    def _update_batch_end(self):
+    def _update_batch_end(self, name):
         batch_time = time.time() - self._t0
         ips = self._global_batch_size / batch_time
         self._full_meter.record(ips)
@@ -57,31 +57,34 @@ class ProfilingHook(tf.keras.callbacks.Callback):
         if self._current_step > self._warmup_steps:
             self._meter.record(ips)
 
+        self.log_metrics(name)
         self._current_step += 1
 
     def on_train_batch_begin(self, batch, logs=None):
         self._update_batch_start()
 
     def on_train_batch_end(self, batch, logs=None):
-        self._update_batch_end()
+        self._update_batch_end('train')
 
     def on_predict_batch_begin(self, batch, logs=None):
         self._update_batch_start()
 
     def on_predict_batch_end(self, batch, logs=None):
-        self._update_batch_end()
+        self._update_batch_end('predict')
 
     def on_test_batch_begin(self, batch, logs=None):
         self._update_batch_start()
 
     def on_test_batch_end(self, batch, logs=None):
-        self._update_batch_end()
+        self._update_batch_end('test')
 
     def on_train_begin(self, logs=None):
         self._session_begin_time = time.time()
 
     def on_train_end(self, logs=None):
         self._session_end_time = time.time()
+        mlflow.log_metric('train_warmup_duration', self._warmup_duration)
+        mlflow.log_metric('train_total_duration', self._session_end_time - self._session_begin_time)
         LOGGER.log('average_images_per_second', self._meter.get_value())
 
     def on_predict_begin(self, logs=None):
@@ -89,6 +92,9 @@ class ProfilingHook(tf.keras.callbacks.Callback):
 
     def on_predict_end(self, logs=None):
         self._session_end_time = time.time()
+        self.log_metrics('predict')
+        mlflow.log_metric('predict_warmup_duration', self._warmup_duration)
+        mlflow.log_metric('predict_total_duration', self._session_end_time - self._session_begin_time)
         LOGGER.log('average_images_per_second', self._meter.get_value())
 
     def on_test_begin(self, logs=None):
@@ -96,7 +102,17 @@ class ProfilingHook(tf.keras.callbacks.Callback):
 
     def on_test_end(self, logs=None):
         self._session_end_time = time.time()
+        mlflow.log_metric('test_warmup_duration', self._warmup_duration)
+        mlflow.log_metric('test_total_duration', self._session_end_time - self._session_begin_time)
         LOGGER.log('average_images_per_second', self._meter.get_value())
+
+    def log_metrics(self, name):
+        if self._current_step > 0:
+            mlflow.log_metric(name + '_avg_ips', self._meter.get_value(), self._current_step)
+            mlflow.log_metric(name + '_full_avg_ips', self._full_meter.get_value(), self._current_step)
+
+            if self._current_step > self._warmup_steps:
+                mlflow.log_metric(name + '_warmup_avg_ips', self._warmup_meter.get_value(), self._current_step)
 
     def get_results(self):
         return {

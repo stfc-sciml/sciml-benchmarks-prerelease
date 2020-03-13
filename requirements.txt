@@ -8,5 +8,9 @@ pyyaml
 pytest
 pytest-benchmark
 nvtx-plugins
+nvidia-ml-py3
 click
 click-config-file
+mlflow
+psutil
+py-cpuinfo
