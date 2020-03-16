@@ -31,6 +31,16 @@ to assign a value for how severe it is for each image (as you would for say
 BM3D).
 
 ### DMS Classification
+Diffuse multiple scattering (DMS) is a relatively new X-ray scattering technique. 
+Multiple scattering of X-rays due to disruption in the long-range order of a 
+crystal results in distinct lines of high-intensity being produced. These DMS 
+lines contain rich information about the crystal structure including information 
+about structure type and lattice parameters.
+
+In this benchmark we take as input a DMS sample produced by a crystal in an 
+unknown orientation and classify the lattice type based on the line pattern 
+produced. We do classification on a binary sample, which can be either a 
+Monoclinic or a Tetragonal crystal.
 
 ### SLSTR Cloud
 
