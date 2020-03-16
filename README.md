@@ -59,6 +59,39 @@ datasets. For example, to download the EM denoise dataset we can run the followi
 sciml-bench download em_denoise <scarf-user-name> ./data/ 
 ```
 
-Replace `<scarf-user-name>` with you actual scarf username.
+Replace `<scarf-user-name>` with you actual SCARF username.
 
 ## Running Benchmarks
+
+The syntax to run a benchmark is as follows:
+
+```
+sciml-bench <benchmark-name> <data-directory> <model-directory>
+```
+Where:
+ - `<data-directory>` is the location of the data for the benchmark
+ - `<model-directory>` is the location to output model results
+
+So to run the the `em_denoise` benchmark the syntax would be:
+
+```
+sciml-bench em_denoise ./data ./em_denoise_out 
+```
+
+Additionally, each benchmark takes a list of arguments such as the `batch_size`,
+`learning_rate` etc. that control the run. To see a full list of options for each
+benchmark run:
+
+```
+sciml-bench <benchmark-name> --help
+```
+
+The parameters for a benchmark can also be passed with a configuration YAML file 
+using the `--config` option. For example:
+
+```
+sciml-bench em_denoise --config config.yml
+```
+
+Some examples of the syntax for configuration files can be found in the 
+[examples](examples) folder.
