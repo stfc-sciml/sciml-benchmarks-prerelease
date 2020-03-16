@@ -75,7 +75,9 @@ class MLFlowDeviceLogger:
         for k,v in self._spec.power_usage.items():
             metrics[k] = v
 
-        mlflow.log_metrics(metrics, self._step)
+        # edge case to prevent logging if the session has died
+        if mlflow.active_run() is not None:
+            mlflow.log_metrics(metrics, self._step)
         self._step += 1
 
 class MLFlowHostLogger:
@@ -98,5 +100,8 @@ class MLFlowHostLogger:
         metrics['host_memory_available'] = bytesto(host_memory['memory_available'], 'm')
         metrics['host_memory_utilization'] = host_memory['memory_percent']
 
-        mlflow.log_metrics(metrics, self._step)
+        # edge case to prevent logging if the session has died
+        if mlflow.active_run() is not None:
+            mlflow.log_metrics(metrics, self._step)
+
         self._step += 1

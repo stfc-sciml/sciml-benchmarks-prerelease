@@ -130,13 +130,12 @@ class Sentinel3Dataset():
         """Input function for training"""
         dataset = tf.data.Dataset.from_tensor_slices(self._train_images)
         dataset = dataset.shuffle(1000)
-        dataset = dataset.interleave(self._generator, cycle_length=2, num_parallel_calls=2)
+        dataset = dataset.interleave(self._generator, cycle_length=16, num_parallel_calls=16)
         dataset = dataset.unbatch()
         dataset = dataset.shuffle(batch_size * 3)
+        dataset = dataset.prefetch(batch_size * 3)
         dataset = dataset.batch(batch_size)
-        dataset = dataset.prefetch(2)
-        # dataset = dataset.cache()
-        dataset = dataset.take(100)
+        dataset = dataset.cache()
         dataset = dataset.repeat()
         return dataset
 
