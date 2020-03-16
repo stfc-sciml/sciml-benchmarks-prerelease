@@ -31,6 +31,16 @@ to assign a value for how severe it is for each image (as you would for say
 BM3D).
 
 ### DMS Classification
+Diffuse multiple scattering (DMS) is a relatively new X-ray scattering technique. 
+Multiple scattering of X-rays due to disruption in the long-range order of a 
+crystal results in distinct lines of high-intensity being produced. These DMS 
+lines contain rich information about the crystal structure including information 
+about structure type and lattice parameters.
+
+In this benchmark we take as input a DMS sample produced by a crystal in an 
+unknown orientation and classify the lattice type based on the line pattern 
+produced. We do classification on a binary sample, which can be either a 
+Monoclinic or a Tetragonal crystal.
 
 ### SLSTR Cloud
 
@@ -59,6 +69,39 @@ datasets. For example, to download the EM denoise dataset we can run the followi
 sciml-bench download em_denoise <scarf-user-name> ./data/ 
 ```
 
-Replace `<scarf-user-name>` with you actual scarf username.
+Replace `<scarf-user-name>` with you actual SCARF username.
 
 ## Running Benchmarks
+
+The syntax to run a benchmark is as follows:
+
+```
+sciml-bench <benchmark-name> <data-directory> <model-directory>
+```
+Where:
+ - `<data-directory>` is the location of the data for the benchmark
+ - `<model-directory>` is the location to output model results
+
+So to run the the `em_denoise` benchmark the syntax would be:
+
+```
+sciml-bench em_denoise ./data ./em_denoise_out 
+```
+
+Additionally, each benchmark takes a list of arguments such as the `batch_size`,
+`learning_rate` etc. that control the run. To see a full list of options for each
+benchmark run:
+
+```
+sciml-bench <benchmark-name> --help
+```
+
+The parameters for a benchmark can also be passed with a configuration YAML file 
+using the `--config` option. For example:
+
+```
+sciml-bench em_denoise --config config.yml
+```
+
+Some examples of the syntax for configuration files can be found in the 
+[examples](examples) folder.
