@@ -6,12 +6,14 @@ from sciml_bench.core.system import HostSpec, DeviceSpec, DeviceSpecs
 def test_host_spec():
     spec = HostSpec()
 
-    print(spec.cpu_info)
+    assert isinstance(spec.disk_io, dict)
+    assert isinstance(spec.net_io, dict)
     assert spec.system == platform.system()
     assert spec.name == os.name
     assert spec.release == platform.release()
     assert spec.num_cores == psutil.cpu_count()
     assert spec.total_memory == psutil.virtual_memory().total
+
 
 def test_device_spec():
     spec = DeviceSpec(0)
@@ -21,6 +23,4 @@ def test_device_spec():
 def test_device_specs():
     spec = DeviceSpecs()
 
-    print(spec.uuids)
     assert spec.device_count == 1
-    assert False

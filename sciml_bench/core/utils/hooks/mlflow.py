@@ -103,7 +103,7 @@ class MLFlowDeviceLogger(RepeatedTimer):
             metrics[k] = v
 
         # Rename the metrics to have a prefix
-        metrics = {self._name + '_' + k: v for k, v in metrics.items()}
+        metrics = {self._name + k: v for k, v in metrics.items()}
 
         # edge case to prevent logging if the session has died
         if mlflow.active_run() is not None:
@@ -112,18 +112,16 @@ class MLFlowDeviceLogger(RepeatedTimer):
 
 class MLFlowHostLogger(RepeatedTimer):
 
-    def __init__(self, name='', *args, **kwargs):
+    def __init__(self, name='', per_device=False, *args, **kwargs):
         super(MLFlowHostLogger, self).__init__(*args, **kwargs)
         self._step = 0
         self._name = name
-        self._spec = HostSpec()
+        self._spec = HostSpec(per_device=per_device)
 
     def run(self):
         metrics = {}
 
         cpu_utilization = self._spec.cpu_percent
-        for i in range(self._spec.num_cores):
-            metrics['cpu_{}_utilization'.format(i)] = cpu_utilization[i]
 
         host_memory = self._spec.memory
         metrics['host_memory_free'] = bytesto(host_memory['memory_free'], 'm')
@@ -131,8 +129,11 @@ class MLFlowHostLogger(RepeatedTimer):
         metrics['host_memory_available'] = bytesto(host_memory['memory_available'], 'm')
         metrics['host_memory_utilization'] = host_memory['memory_percent']
 
+        metrics.update(self._spec.disk_io)
+        metrics.update(self._spec.net_io)
+
         # Rename the metrics to have a prefix
-        metrics = {self._name + '_' + k: v for k, v in metrics.items()}
+        metrics = {self._name + k: v for k, v in metrics.items()}
 
         # edge case to prevent logging if the session has died
         if mlflow.active_run() is not None:

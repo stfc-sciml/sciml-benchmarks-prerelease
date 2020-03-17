@@ -7,8 +7,8 @@ import pynvml as nv
 
 class HostSpec:
 
-    def __init__(self):
-        pass
+    def __init__(self, per_device=False):
+        self._per_device = per_device
 
     @property
     def name(self):
@@ -41,13 +41,36 @@ class HostSpec:
 
     @property
     def cpu_percent(self):
-        return psutil.cpu_percent(percpu=True)
+        info = psutil.cpu_percent(percpu=self._per_device)
+        if not self._per_device:
+            info = [info]
+
+        metrics = {}
+        for i, percent in enumerate(info):
+            metrics['cpu_{}_utilization'.format(i)] = percent
+        return metrics
 
     @property
     def cpu_info(self):
         info = cpuinfo.get_cpu_info()
         keys = ['brand', 'arch', 'vendor_id', 'hz_advertised', 'hz_actual', 'model', 'family']
         return {'cpu_' + key: value for key, value in info.items() if key in keys}
+
+    @property
+    def disk_io(self):
+        info = psutil.disk_io_counters(perdisk=self._per_device)
+        if self._per_device:
+            return {'disk_' + key + '_' + k: v for key, value in info.items() for k, v in value._asdict().items()}
+        else:
+            return {'disk_' + k: v for k, v in info._asdict().items()}
+
+    @property
+    def net_io(self):
+        info = psutil.net_io_counters(pernic=self._per_device)
+        if self._per_device:
+            return {'net_' + key + '_' + k: v for key, value in info.items() for k, v in value._asdict().items()}
+        else:
+            return {'net_' + k: v for k, v in info._asdict().items()}
 
     @property
     def memory(self):
