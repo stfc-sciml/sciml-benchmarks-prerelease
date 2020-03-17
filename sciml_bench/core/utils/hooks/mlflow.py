@@ -2,7 +2,7 @@ import tensorflow as tf
 import mlflow
 from threading import Timer
 from abc import abstractmethod, ABCMeta
-from sciml_bench.core.system import DeviceSpecs, HostSpec
+from sciml_bench.core.system import DeviceSpecs, HostSpec, bytesto
 
 class MLFlowCallback(tf.keras.callbacks.Callback):
 
@@ -54,18 +54,12 @@ class RepeatedTimer:
     def __exit__(self ,type, value, traceback):
         self.stop()
 
-def bytesto(bytes, to, bsize=1024):
-    size = {'k' : 1, 'm': 2, 'g' : 3, 't' : 4, 'p' : 5, 'e' : 6 }
-    r = float(bytes)
-    for i in range(size[to]):
-        r = r / bsize
-    return(r)
 
 def log_host_stats(name, interval=0.5):
     """Decorator to log stats about the host system to mlflow for this function call"""
     def _wrap(function):
         def _inner(*args, **kwargs):
-            with MLFlowHostLogger(interval=interval):
+            with MLFlowHostLogger(name=name, interval=interval):
                 return function(*args, **kwargs)
         return _inner
     return _wrap
@@ -74,7 +68,7 @@ def log_device_stats(name, interval=0.5):
     """Decorator to log stats about devices to mlflow for this function call"""
     def _wrap(function):
         def _inner(*args, **kwargs):
-            with MLFlowDeviceLogger(interval=interval):
+            with MLFlowDeviceLogger(name=name, interval=interval):
                 return function(*args, **kwargs)
         return _inner
     return _wrap
@@ -85,7 +79,7 @@ class MLFlowDeviceLogger(RepeatedTimer):
         super(MLFlowDeviceLogger, self).__init__(*args, **kwargs)
 
         self._step = 0
-        self._name = name
+        self._name = name + '_'
         self._spec = DeviceSpecs()
 
     def run(self):
@@ -99,8 +93,7 @@ class MLFlowDeviceLogger(RepeatedTimer):
         for k,v in self._spec.utilization_rates.items():
             metrics[k + '_utilization'] = v
 
-        for k,v in self._spec.power_usage.items():
-            metrics[k] = v
+        metrics.update(self._spec.power_usage)
 
         # Rename the metrics to have a prefix
         metrics = {self._name + k: v for k, v in metrics.items()}
@@ -115,20 +108,14 @@ class MLFlowHostLogger(RepeatedTimer):
     def __init__(self, name='', per_device=False, *args, **kwargs):
         super(MLFlowHostLogger, self).__init__(*args, **kwargs)
         self._step = 0
-        self._name = name
+        self._name = name + '_'
         self._spec = HostSpec(per_device=per_device)
 
     def run(self):
         metrics = {}
 
-        cpu_utilization = self._spec.cpu_percent
-
-        host_memory = self._spec.memory
-        metrics['host_memory_free'] = bytesto(host_memory['memory_free'], 'm')
-        metrics['host_memory_used'] = bytesto(host_memory['memory_used'], 'm')
-        metrics['host_memory_available'] = bytesto(host_memory['memory_available'], 'm')
-        metrics['host_memory_utilization'] = host_memory['memory_percent']
-
+        metrics.update(self._spec.memory)
+        metrics.update(self._spec.cpu_percent)
         metrics.update(self._spec.disk_io)
         metrics.update(self._spec.net_io)
 

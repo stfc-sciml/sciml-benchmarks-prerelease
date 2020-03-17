@@ -5,6 +5,13 @@ import socket
 import cpuinfo
 import pynvml as nv
 
+def bytesto(bytes, to, bsize=1024):
+    size = {'k' : 1, 'm': 2, 'g' : 3, 't' : 4, 'p' : 5, 'e' : 6 }
+    r = float(bytes)
+    for i in range(size[to]):
+        r = r / bsize
+    return(r)
+
 class HostSpec:
 
     def __init__(self, per_device=False):
@@ -75,7 +82,14 @@ class HostSpec:
     @property
     def memory(self):
         memory_props = dict(psutil.virtual_memory()._asdict())
-        return dict({"memory_" + key: value for key, value in memory_props.items()})
+        host_memory = dict({"memory_" + key: value for key, value in memory_props.items()})
+
+        metrics = {}
+        metrics['host_memory_free'] = bytesto(host_memory['memory_free'], 'm')
+        metrics['host_memory_used'] = bytesto(host_memory['memory_used'], 'm')
+        metrics['host_memory_available'] = bytesto(host_memory['memory_available'], 'm')
+        metrics['host_memory_utilization'] = host_memory['memory_percent']
+        return metrics
 
 class DeviceSpecs:
 
