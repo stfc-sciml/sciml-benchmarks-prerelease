@@ -1,9 +1,11 @@
 import tensorflow as tf
 import numpy as np
 from pathlib import Path
+
+from sciml_bench.core.data_loader import DataLoader
 from sciml_bench.em_denoise.constants import IMG_SIZE
 
-class EMGrapheneDataset:
+class EMGrapheneDataset(DataLoader):
 
     def __init__(self, data_dir, seed=None):
         self._seed = seed

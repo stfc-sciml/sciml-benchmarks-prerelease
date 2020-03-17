@@ -20,9 +20,11 @@ import tensorflow as tf
 import numpy as np
 import xarray as xr
 from scipy import interpolate
+
+from sciml_bench.core.data_loader import DataLoader
 from sciml_bench.slstr_cloud.constants import PATCH_SIZE, PATCHES_PER_IMAGE
 
-class Sentinel3Dataset():
+class Sentinel3Dataset(DataLoader):
     """Load, separate and prepare the data for training and prediction"""
 
     def __init__(self, data_dir, seed=0):

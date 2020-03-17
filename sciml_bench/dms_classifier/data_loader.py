@@ -2,9 +2,11 @@ import h5py
 import tensorflow as tf
 import numpy as np
 from pathlib import Path
+
+from sciml_bench.core.data_loader import DataLoader
 from sciml_bench.dms_classifier.constants import IMG_HEIGHT, IMG_WIDTH, N_CHANNELS
 
-class DMSDataset:
+class DMSDataset(DataLoader):
 
     def __init__(self, data_dir, seed=None):
         self._seed = seed
