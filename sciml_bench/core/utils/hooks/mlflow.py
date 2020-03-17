@@ -51,7 +51,7 @@ class RepeatedTimer:
     def __enter__(self):
         self.start()
 
-    def __exit__(self):
+    def __exit__(self ,type, value, traceback):
         self.stop()
 
 def bytesto(bytes, to, bsize=1024):
@@ -61,12 +61,31 @@ def bytesto(bytes, to, bsize=1024):
         r = r / bsize
     return(r)
 
+def log_host_stats(name, interval=0.5):
+    """Decorator to log stats about the host system to mlflow for this function call"""
+    def _wrap(function):
+        def _inner(*args, **kwargs):
+            with MLFlowHostLogger(interval=interval):
+                return function(*args, **kwargs)
+        return _inner
+    return _wrap
+
+def log_device_stats(name, interval=0.5):
+    """Decorator to log stats about devices to mlflow for this function call"""
+    def _wrap(function):
+        def _inner(*args, **kwargs):
+            with MLFlowDeviceLogger(interval=interval):
+                return function(*args, **kwargs)
+        return _inner
+    return _wrap
+
 class MLFlowDeviceLogger(RepeatedTimer):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, name='', *args, **kwargs):
         super(MLFlowDeviceLogger, self).__init__(*args, **kwargs)
 
         self._step = 0
+        self._name = name
         self._spec = DeviceSpecs()
 
     def run(self):
@@ -83,6 +102,9 @@ class MLFlowDeviceLogger(RepeatedTimer):
         for k,v in self._spec.power_usage.items():
             metrics[k] = v
 
+        # Rename the metrics to have a prefix
+        metrics = {self._name + '_' + k: v for k, v in metrics.items()}
+
         # edge case to prevent logging if the session has died
         if mlflow.active_run() is not None:
             mlflow.log_metrics(metrics, self._step)
@@ -90,11 +112,11 @@ class MLFlowDeviceLogger(RepeatedTimer):
 
 class MLFlowHostLogger(RepeatedTimer):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, name='', *args, **kwargs):
         super(MLFlowHostLogger, self).__init__(*args, **kwargs)
         self._step = 0
+        self._name = name
         self._spec = HostSpec()
-
 
     def run(self):
         metrics = {}
@@ -109,8 +131,13 @@ class MLFlowHostLogger(RepeatedTimer):
         metrics['host_memory_available'] = bytesto(host_memory['memory_available'], 'm')
         metrics['host_memory_utilization'] = host_memory['memory_percent']
 
+        # Rename the metrics to have a prefix
+        metrics = {self._name + '_' + k: v for k, v in metrics.items()}
+
         # edge case to prevent logging if the session has died
         if mlflow.active_run() is not None:
             mlflow.log_metrics(metrics, self._step)
 
         self._step += 1
+
+
