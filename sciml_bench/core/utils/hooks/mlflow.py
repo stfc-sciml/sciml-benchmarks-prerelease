@@ -1,6 +1,7 @@
 import tensorflow as tf
 import mlflow
 from threading import Timer
+from abc import abstractmethod, ABCMeta
 from sciml_bench.core.system import DeviceSpecs, HostSpec
 
 class MLFlowCallback(tf.keras.callbacks.Callback):
@@ -19,18 +20,23 @@ class MLFlowCallback(tf.keras.callbacks.Callback):
 
 
 class RepeatedTimer:
-    def __init__(self, interval, function, *args, **kwargs):
+    __metaclass__ = ABCMeta
+
+    def __init__(self, interval, *args, **kwargs):
         self._timer     = None
         self.interval   = interval
-        self.function   = function
         self.args       = args
         self.kwargs     = kwargs
         self.is_running = False
 
+    @abstractmethod
+    def run(self):
+        pass
+
     def _run(self):
         self.is_running = False
         self.start()
-        self.function(*self.args, **self.kwargs)
+        self.run(*self.args, **self.kwargs)
 
     def start(self):
         if not self.is_running:
@@ -55,13 +61,15 @@ def bytesto(bytes, to, bsize=1024):
         r = r / bsize
     return(r)
 
-class MLFlowDeviceLogger:
+class MLFlowDeviceLogger(RepeatedTimer):
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super(MLFlowDeviceLogger, self).__init__(*args, **kwargs)
+
         self._step = 0
         self._spec = DeviceSpecs()
 
-    def __call__(self):
+    def run(self):
         metrics = {}
 
         for k,v in self._spec.memory.items():
@@ -80,14 +88,15 @@ class MLFlowDeviceLogger:
             mlflow.log_metrics(metrics, self._step)
         self._step += 1
 
-class MLFlowHostLogger:
+class MLFlowHostLogger(RepeatedTimer):
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super(MLFlowHostLogger, self).__init__(*args, **kwargs)
         self._step = 0
         self._spec = HostSpec()
 
 
-    def __call__(self):
+    def run(self):
         metrics = {}
 
         cpu_utilization = self._spec.cpu_percent

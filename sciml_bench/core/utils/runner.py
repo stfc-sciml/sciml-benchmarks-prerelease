@@ -1,9 +1,10 @@
 import tensorflow as tf
 import mlflow
 from pathlib import Path
+
 from sciml_bench.core.dllogger.logger import LOGGER
 from sciml_bench.core.system import HostSpec, DeviceSpecs
-from sciml_bench.core.utils.hooks.mlflow import MLFlowDeviceLogger, MLFlowHostLogger, RepeatedTimer
+from sciml_bench.core.utils.hooks.mlflow import MLFlowDeviceLogger, MLFlowHostLogger
 
 
 class BenchmarkRunner:
@@ -42,8 +43,8 @@ class BenchmarkRunner:
         return params
 
     def run(self, **params):
-        host_logger = RepeatedTimer(0.5, MLFlowHostLogger())
-        device_logger = RepeatedTimer(0.5, MLFlowDeviceLogger())
+        host_logger = MLFlowHostLogger(interval=0.5)
+        device_logger = MLFlowDeviceLogger(interval=0.5)
 
         host_logger.start()
         device_logger.start()
