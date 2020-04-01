@@ -111,5 +111,5 @@ def cnn_model(input_shape=(150, 150, 3), learning_rate=0.001, kernel_reg=None, b
         activation='sigmoid',
       ))
 
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), loss='binary_crossentropy')
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), loss='binary_crossentropy', metrics=['accuracy'])
     return model

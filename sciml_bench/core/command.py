@@ -89,13 +89,13 @@ def em_denoise(ctx, **kwargs):
 @click.pass_context
 @click.argument('data_dir')
 @click.argument('model_dir')
-@click.option('--epochs', default=30, help='Set number of epochs')
-@click.option('--batch_size', default=8, help='Set the batch size for training & test')
+@click.option('--epochs', default=40, help='Set number of epochs')
+@click.option('--batch_size', default=32, help='Set the batch size for training & test')
 def optics_damage(ctx, **kwargs):
     mlflow.set_experiment('optics_damage')
     with mlflow.start_run():
         kwargs.update(ctx.obj)
-        kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'optics_damage')
+        kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'optics')
         optics_damage_mod.main(**kwargs)
 
 @cli.command(help='Run the SLSTR Cloud Segmentation Benchmark')

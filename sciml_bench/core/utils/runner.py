@@ -20,7 +20,6 @@ class BenchmarkRunner:
         mlflow.set_tag('host_num_cores', host_spec.num_cores)
         mlflow.set_tag('host_release', host_spec.release)
         mlflow.set_tag('host_system', host_spec.system)
-        mlflow.set_tag('host_memory_total', host_spec.memory['memory_total'])
         mlflow.set_tags(host_spec.cpu_info)
 
         # Log device information

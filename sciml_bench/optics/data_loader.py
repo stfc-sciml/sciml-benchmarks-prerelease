@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 
+from pathlib import Path
 from sciml_tools.image import load_tiff
 from sciml_bench.core.data_loader import DataLoader
 
@@ -10,6 +11,7 @@ class OpticsDataLoader(DataLoader):
     def __init__(self, data_dir, seed=None):
         self._seed = seed
 
+        data_dir = Path(data_dir)
         train_df = pd.read_csv(data_dir / 'train/meta.csv')
         test_df = pd.read_csv(data_dir / 'test/meta.csv')
         valid_df = pd.read_csv(data_dir / 'valid/meta.csv')
@@ -58,24 +60,24 @@ class OpticsDataLoader(DataLoader):
         x = (x - self._min) / (self._max - self._min)
         return x
 
-    def train_dataset(self, batch_size=10, augment=None, **kwargs):
+    def train_fn(self, batch_size=10, **kwargs):
         dataset = tf.data.Dataset.from_tensor_slices((self._train_images, self._train_labels))
         dataset = dataset.map(lambda x, y: (self._crop_image(x), y))
         dataset = dataset.map(lambda x, y: (self._normalize(x), y))
         dataset = dataset.shuffle(2000)
         dataset = dataset.batch(batch_size)
-        return dataset
+        return dataset.repeat()
 
-    def validation_dataset(self, batch_size=10, **kwargs):
+    def validation_fn(self, batch_size=10, **kwargs):
         dataset = tf.data.Dataset.from_tensor_slices((self._valid_images, self._valid_labels))
         dataset = dataset.map(lambda x, y: (self._crop_image(x), y))
         dataset = dataset.map(lambda x, y: (self._normalize(x), y))
         dataset = dataset.batch(batch_size)
-        return dataset
+        return dataset.repeat()
 
-    def test_dataset(self, batch_size=10, **kwargs):
+    def test_fn(self, batch_size=10, **kwargs):
         dataset = tf.data.Dataset.from_tensor_slices((self._test_images, self._test_labels))
         dataset = dataset.map(lambda x, y: (self._crop_image(x), y))
         dataset = dataset.map(lambda x, y: (self._normalize(x), y))
         dataset = dataset.batch(batch_size)
-        return dataset
+        return dataset.repeat()
