@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras.regularizers import l2
 
-def cnn_model(input_shape=(150, 150, 3), kernel_reg=None, batch_norm=False, **params):
+def cnn_model(input_shape=(150, 150, 3), learning_rate=0.001, kernel_reg=None, batch_norm=False, **params):
     """ Simple two layer CNN model for binary classification
 
     This will classify images into damaged and undamaged.
@@ -111,4 +111,5 @@ def cnn_model(input_shape=(150, 150, 3), kernel_reg=None, batch_norm=False, **pa
         activation='sigmoid',
       ))
 
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), loss='binary_crossentropy')
     return model

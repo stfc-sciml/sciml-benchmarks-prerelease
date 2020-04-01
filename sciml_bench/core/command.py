@@ -9,6 +9,7 @@ from pathlib import Path
 import sciml_bench.dms_classifier.main as dms_classifier_mod
 import sciml_bench.em_denoise.main as em_denoise_mod
 import sciml_bench.slstr_cloud.main as slstr_cloud_mod
+import sciml_bench.optics.main as optics_damage_mod
 from sciml_bench.core.download import download_datasets
 
 def yaml_provider(file_path, cmd_name):
@@ -82,6 +83,20 @@ def em_denoise(ctx, **kwargs):
         kwargs.update(ctx.obj)
         kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'em_denoise')
         em_denoise_mod.main(**kwargs)
+
+@cli.command(help='Run the Laser Optics Damaged Detection Benchmark')
+@click_config_file.configuration_option(provider=yaml_provider, implicit=False)
+@click.pass_context
+@click.argument('data_dir')
+@click.argument('model_dir')
+@click.option('--epochs', default=30, help='Set number of epochs')
+@click.option('--batch_size', default=8, help='Set the batch size for training & test')
+def optics_damage(ctx, **kwargs):
+    mlflow.set_experiment('optics_damage')
+    with mlflow.start_run():
+        kwargs.update(ctx.obj)
+        kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'optics_damage')
+        optics_damage_mod.main(**kwargs)
 
 @cli.command(help='Run the SLSTR Cloud Segmentation Benchmark')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
