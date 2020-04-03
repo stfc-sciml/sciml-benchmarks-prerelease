@@ -1,4 +1,7 @@
 import yaml
+import warnings
+warnings.filterwarnings("ignore")
+import numpy as np
 import tensorflow as tf
 from pathlib import Path
 import mlflow.tensorflow
@@ -25,7 +28,7 @@ class Benchmark:
             raise RuntimeError("Model has not been built!\n \
                     Please call benchmark.build() first to compile the model!")
 
-        spe = self._dataset.train_size / params['global_batch_size']
+        spe = int(np.ceil(self._dataset.train_size / params['global_batch_size']))
 
         hooks = []
 
@@ -74,7 +77,7 @@ class Benchmark:
         mlf_callback = MLFlowCallback()
         hooks.append(mlf_callback)
 
-        predict_steps = self._dataset.test_size / params['global_batch_size']
+        predict_steps = int(np.ceil(self._dataset.test_size / params['global_batch_size']))
 
         LOGGER.log('Begin Predict...')
         LOGGER.log('Predicting for {} steps'.format(predict_steps))

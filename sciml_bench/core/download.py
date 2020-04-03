@@ -16,6 +16,9 @@ def download_datasets(name, destination, user=None):
     destination = Path(destination)
     destination.mkdir(parents=True, exist_ok=True)
 
+    if user is None:
+        user = input('Enter username for SCARF:\n')
+
     if name == 'em_denoise':
         get_dataset('em_denoise', destination, user)
     if name == 'dms_classifier':
