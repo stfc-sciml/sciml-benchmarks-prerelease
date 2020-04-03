@@ -101,7 +101,7 @@ sudo docker run --gpus all -v $PWD/data:/data -v $PWD/out:/out -p 5000:5000 samu
  - `-p 5000:5000`: binds a port address from the container to the host
 
  
-Go and visit `localhost:5000` and what the results roll in.
+Go and visit `localhost:5000` and watch the results roll in.
 
 
 ### Using the `sciml-bench` command 
