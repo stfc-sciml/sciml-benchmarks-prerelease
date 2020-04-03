@@ -103,8 +103,6 @@ sudo docker run --gpus all -v $PWD/data:/data -v $PWD/out:/out -p 5000:5000 samu
  
 Go and visit `localhost:5000` and what the results roll in.
 
-### Using the singularity container
-
 
 ### Using the `sciml-bench` command 
 The syntax to run a benchmark is as follows:
