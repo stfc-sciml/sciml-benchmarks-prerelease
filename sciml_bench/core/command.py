@@ -96,10 +96,6 @@ def all(ctx, data_dir, model_dir, **params):
     params = yaml_provider('configs/em_denoise.yml', None)
     ctx.invoke(em_denoise, data_dir=data_dir / 'em_denoise', model_dir=model_dir, **params)
 
-    LOGGER.info("Running Optics Damage Benchmark")
-    # params = yaml_provider('configs/optics_damage.yml', None)
-    ctx.invoke(optics_damage, data_dir=data_dir / 'optics_damage', model_dir=model_dir, **params)
-
     LOGGER.info("Running SLSTR Cloud Segmentation Benchmark")
     params = yaml_provider('configs/slstr_cloud.yml', None)
     ctx.invoke(slstr_cloud, data_dir=data_dir / 'slstr_cloud', model_dir=model_dir, **params)
@@ -135,21 +131,6 @@ def em_denoise(ctx, **kwargs):
         kwargs.update(ctx.obj)
         kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'em_denoise')
         em_denoise_mod.main(**kwargs)
-
-@cli.command(help='Run the Laser Optics Damaged Detection Benchmark')
-@click_config_file.configuration_option(provider=yaml_provider, implicit=False)
-@click.pass_context
-@click.argument('data_dir')
-@click.argument('model_dir')
-@click.option('--epochs', default=40, help='Set number of epochs')
-@click.option('--batch_size', default=32, help='Set the batch size for training & test')
-def optics_damage(ctx, **kwargs):
-    import sciml_bench.optics.main as optics_damage_mod
-    mlflow.set_experiment('optics_damage')
-    with mlflow.start_run():
-        kwargs.update(ctx.obj)
-        kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'optics')
-        optics_damage_mod.main(**kwargs)
 
 @cli.command(help='Run the SLSTR Cloud Segmentation Benchmark')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
