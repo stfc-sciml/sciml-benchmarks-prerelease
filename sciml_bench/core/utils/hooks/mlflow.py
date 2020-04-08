@@ -6,17 +6,24 @@ from sciml_bench.core.system import DeviceSpecs, HostSpec, bytesto
 
 class MLFlowCallback(tf.keras.callbacks.Callback):
 
-  def on_train_batch_end(self, batch, logs=None):
-      mlflow.log_metrics(logs, step=batch)
+    def __init__(self, log_batch=False):
+        self._log_batch = log_batch
 
-  def on_test_batch_end(self, batch, logs=None):
-      mlflow.log_metrics(logs, step=batch)
+    def on_train_batch_end(self, batch, logs=None):
+        if self._log_batch:
+            mlflow.log_metrics(logs, step=batch)
 
-  def on_predict_batch_end(self, batch, logs=None):
-      mlflow.log_metrics(logs, step=batch)
+    def on_test_batch_end(self, batch, logs=None):
+        if self._log_batch:
+            mlflow.log_metrics(logs, step=batch)
 
-  def on_epoch_end(self, epoch, logs=None):
-      mlflow.log_metrics(logs, step=epoch)
+    def on_predict_batch_end(self, batch, logs=None):
+        if self._log_batch:
+            mlflow.log_metrics(logs, step=batch)
+
+    def on_epoch_end(self, epoch, logs=None):
+        if not self._log_batch:
+            mlflow.log_metrics(logs, step=epoch)
 
 
 class RepeatedTimer:

@@ -1,5 +1,6 @@
 import time
-from sciml_bench.core.utils.hooks.mlflow import MLFlowDeviceLogger, MLFlowHostLogger, log_device_stats, log_host_stats
+from sciml_bench.core.test.helpers import fake_model_fn, FakeDataLoader
+from sciml_bench.core.utils.hooks.mlflow import MLFlowDeviceLogger, MLFlowHostLogger, MLFlowCallback, log_device_stats, log_host_stats
 
 def test_MLFlowDeviceLogger(mocker):
 
@@ -44,3 +45,20 @@ def test_log_host_stats(mocker):
     spy = mocker.spy(MLFlowHostLogger, 'run')
     my_func()
     spy.assert_called()
+
+def test_MLFlowCallback(mocker):
+    metrics = mocker.patch('mlflow.log_metrics')
+
+    loader = FakeDataLoader((10, 10), (1, ))
+    model = fake_model_fn((10, 10))
+    model.fit(loader.train_fn(batch_size=1), callbacks=[MLFlowCallback()])
+
+    metrics.assert_called()
+    assert metrics.call_count == 1
+
+    metrics.reset_mock()
+    model.fit(loader.train_fn(batch_size=1), callbacks=[MLFlowCallback(log_batch=True)])
+
+    metrics.assert_called()
+    assert metrics.call_count == 10
+
