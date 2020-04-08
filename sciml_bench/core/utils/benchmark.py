@@ -17,7 +17,8 @@ class Benchmark:
         self._dataset = dataset
         self._results = {}
 
-    def build(self, **params):
+    def build(self, log_batch=False, **params):
+        self._log_batch = log_batch
         self._model = self._model_fn(self._dataset.dimensions, **params)
 
     def train(self, epochs=1, **params):
@@ -34,7 +35,7 @@ class Benchmark:
                                             spe, num_replicas=params['num_replicas'])
         hooks.append(train_profiler_hook)
 
-        mlf_callback = MLFlowCallback()
+        mlf_callback = MLFlowCallback(self._log_batch)
         hooks.append(mlf_callback)
 
         # Add hook for capturing metrics vs. epoch
@@ -71,7 +72,7 @@ class Benchmark:
 
         hooks = [test_profiler_hook]
 
-        mlf_callback = MLFlowCallback()
+        mlf_callback = MLFlowCallback(self._log_batch)
         hooks.append(mlf_callback)
 
         predict_steps = int(np.ceil(self._dataset.test_size / params['global_batch_size']))

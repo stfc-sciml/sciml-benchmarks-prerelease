@@ -6,7 +6,6 @@ from sciml_bench.core.dllogger.logger import LOGGER
 from sciml_bench.core.system import HostSpec, DeviceSpecs
 from sciml_bench.core.utils.hooks.mlflow import MLFlowDeviceLogger, MLFlowHostLogger
 
-
 class BenchmarkRunner:
 
     def __init__(self, benchmark):
@@ -41,9 +40,9 @@ class BenchmarkRunner:
         Path(params['model_dir']).mkdir(parents=True, exist_ok=True)
         return params
 
-    def run(self, **params):
-        host_logger = MLFlowHostLogger(interval=0.5)
-        device_logger = MLFlowDeviceLogger(interval=0.5)
+    def run(self, log_interval=0.5, **params):
+        host_logger = MLFlowHostLogger(interval=log_interval)
+        device_logger = MLFlowDeviceLogger(interval=log_interval)
 
         host_logger.start()
         device_logger.start()

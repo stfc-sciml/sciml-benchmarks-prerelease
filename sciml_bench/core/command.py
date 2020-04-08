@@ -62,6 +62,8 @@ def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
 @click.option('--cpu-only', default=False, is_flag=True, help='Disable GPU execution')
 @click.option('--use-amp', default=False, is_flag=True, help='Enable Automatic Mixed Precision')
 @click.option('--exec-mode', default='train_and_predict', type=click.Choice(['train', 'train_and_predict', 'predict']), help='Set the execution mode')
+@click.option('--log-batch', default=False, is_flag=True, help='Whether to log metrics by batch or by epoch')
+@click.option('--log-interval', default=0.5, help='Logging interval for system metrics')
 @click.option('--seed', default=42, type=int, help='Random seed to use for initialization of random state')
 def cli(ctx, tracking_uri=None, **kwargs):
     ctx.ensure_object(dict)
