@@ -15,7 +15,7 @@ def test_data_properties(data_loader):
     assert data_loader.train_size == 6448
     assert data_loader.test_size == 1612
 
-
+@pytest.mark.loadtest
 def test_train_fn(data_loader):
     dataset = data_loader.train_fn()
     inputs, outputs = next(dataset.as_numpy_iterator())
@@ -23,7 +23,7 @@ def test_train_fn(data_loader):
     assert inputs.shape == (10, IMG_HEIGHT, IMG_WIDTH, N_CHANNELS)
     assert outputs.shape == (10, )
 
-
+@pytest.mark.loadtest
 def test_test_fn(data_loader):
     dataset = data_loader.test_fn()
     inputs, outputs = next(dataset.as_numpy_iterator())

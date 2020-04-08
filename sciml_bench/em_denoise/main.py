@@ -3,7 +3,7 @@ from sciml_bench.em_denoise.data_loader import EMGrapheneDataset
 from sciml_bench.em_denoise.model import autoencoder
 from sciml_bench.core.utils.runner import BenchmarkRunner
 
-def main(**params):
+def main(data_dir=None, seed=42, **params):
     dataset = EMGrapheneDataset(data_dir=params['data_dir'],
                                seed=params['seed'])
 

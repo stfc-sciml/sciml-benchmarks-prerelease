@@ -6,6 +6,7 @@ from pathlib import Path
 from sciml_bench.slstr_cloud.data_loader import Sentinel3Dataset
 from sciml_bench.slstr_cloud.constants import PATCH_SIZE
 
+@pytest.mark.loadtest
 def test_sentinel3_dataset_train_fn():
     path = Path("data/slstr_cloud")
     dataset = Sentinel3Dataset(path).train_fn(batch_size=2)
@@ -33,6 +34,7 @@ def test_sentinel3_dataset_train_fn():
     assert msk.max() == 1
     assert msk.min() == 0
 
+@pytest.mark.loadtest
 def test_sentinel3_dataset_test_fn():
     path = Path("data/slstr_cloud")
     dataset = Sentinel3Dataset(path).test_fn(batch_size=2)
@@ -56,6 +58,7 @@ def test_sentinel3_dataset_test_fn():
     assert img.shape == tf.TensorShape((2, PATCH_SIZE, PATCH_SIZE, 9))
     assert msk.shape == tf.TensorShape((2, PATCH_SIZE, PATCH_SIZE, 2))
 
+@pytest.mark.loadtest
 @pytest.mark.benchmark(
     max_time=30,
     min_rounds=3,
@@ -69,6 +72,7 @@ def test_sentinel3_dataset_load_data(benchmark):
     benchmark(dataset._load_data, path)
 
 
+@pytest.mark.loadtest
 @pytest.mark.benchmark(
     max_time=30,
     min_rounds=3,

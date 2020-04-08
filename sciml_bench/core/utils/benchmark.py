@@ -4,8 +4,6 @@ warnings.filterwarnings("ignore")
 import numpy as np
 import tensorflow as tf
 from pathlib import Path
-import mlflow.tensorflow
-import mlflow
 
 from sciml_bench.core.dllogger import tags, LOGGER
 from sciml_bench.core.utils.hooks.mlflow import MLFlowCallback
@@ -23,7 +21,6 @@ class Benchmark:
         self._model = self._model_fn(self._dataset.dimensions, **params)
 
     def train(self, epochs=1, **params):
-        mlflow.tensorflow.autolog()
         if self._model is None:
             raise RuntimeError("Model has not been built!\n \
                     Please call benchmark.build() first to compile the model!")

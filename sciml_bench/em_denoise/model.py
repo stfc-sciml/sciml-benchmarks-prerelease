@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-def autoencoder(input_shape, **params):
+def autoencoder(input_shape, learning_rate=0.001, **params):
     skip_layers = []
 
     input_layer = tf.keras.layers.Input(input_shape)
@@ -55,5 +55,5 @@ def autoencoder(input_shape, **params):
     x = tf.keras.layers.Conv2D(filters=1, kernel_size=3, activation='linear', padding='same')(x)
 
     model = tf.keras.models.Model(input_layer, x)
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=params['learning_rate']), loss='mse')
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), loss='mse')
     return model
