@@ -60,19 +60,51 @@ sciml-bench --help
 ```
 
 ## Accessing Data
+### Using `rsync`
 
+The easiest way to sync the data is to run the following command:
+```
+rsync -vaP <user-name>@scarf.rl.ac.uk/work3/projects/sciml/benchmarks ./data
+```
+
+Where the `<user-name>` is your SCARF username.
+
+
+### Using `sciml-bench`
 The `sciml-bench` command provides a method for downloading datasets from the 
 remote data store. You can choose to download a single dataset or all of the 
 datasets. For example, to download the EM denoise dataset we can run the following:
 
 ```
-sciml-bench download em_denoise <scarf-user-name> ./data/ 
+sciml-bench download all ./data/ --user <scarf-user-name>
 ```
 
 Replace `<scarf-user-name>` with you actual SCARF username.
 
 ## Running Benchmarks
 
+### Using the docker container
+The easiest way to run all benchmarks is to grab the docker container:
+
+```
+docker pull samueljackson/sciml-bench:latest
+```
+
+Then you can run the benchmarks with the following command:
+```
+sudo docker run --gpus all -v $PWD/data:/data -v $PWD/out:/out -p 5000:5000 samueljackson/sciml_bench
+```
+
+ - `--gpus`: specifies the number of GPUs to use from the host system
+ - `-v $PWD/data:/data`: mounts the data folder on the host to the container. The part before the colon should point to location of the downloaded data
+ - `-v $PWD/out:/out`:  mounts the output folder in the container to the host system. This ensures that the captured run data is saved after exection.
+ - `-p 5000:5000`: binds a port address from the container to the host
+
+ 
+Go and visit `localhost:5000` and watch the results roll in.
+
+
+### Using the `sciml-bench` command 
 The syntax to run a benchmark is as follows:
 
 ```
