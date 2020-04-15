@@ -15,4 +15,3 @@ mlflow
 psutil
 py-cpuinfo
 pytest-mock
-git+git://github.com/samueljackson92/sciml-tools.git
