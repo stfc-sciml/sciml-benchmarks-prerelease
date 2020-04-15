@@ -5,8 +5,8 @@ with open('requirements.txt') as f:
 
 dependancies = []
 for req in requirements:
-    if 'git+' in req:
-        req = 'sciml_tools @ git+ssh://git@github.com/samueljackson92/sciml-tools@master#egg=some-pkg'
+    # if 'git+' in req:
+    #     req = 'sciml_tools @ git+ssh://git@github.com/samueljackson92/sciml-tools@master#egg=some-pkg'
     dependancies.append(req)
 
 setup(
