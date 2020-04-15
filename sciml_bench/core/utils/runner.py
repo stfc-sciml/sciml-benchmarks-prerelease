@@ -1,10 +1,12 @@
 import tensorflow as tf
 import mlflow
+import horovod.tensorflow.keras as hvd
 from pathlib import Path
 
 from sciml_bench.core.dllogger.logger import LOGGER
 from sciml_bench.core.system import HostSpec, DeviceSpecs
 from sciml_bench.core.utils.hooks.mlflow import MLFlowDeviceLogger, MLFlowHostLogger
+from sciml_bench.core.utils.benchmark import Benchmark, MultiNodeBenchmark
 
 class BenchmarkRunner:
 
@@ -74,3 +76,65 @@ class BenchmarkRunner:
 
         mlflow.log_artifact(Path(params['model_dir']) / 'final_weights.h5')
         mlflow.log_artifact(Path(params['model_dir']) / 'params.yml')
+
+
+class MultiNodeBenchmarkRunner:
+
+    def __init__(self, benchmark):
+        self._benchmark = benchmark
+        assert isinstance(self._benchmark, MultiNodeBenchmark), "Benchmark is not a MultiNode benchmark!"
+
+    def setup(self, **params):
+        hvd.init()
+
+        # Horovod: pin GPU to be used to process local rank (one GPU per process)
+        gpus = tf.config.experimental.list_physical_devices('GPU')
+
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+
+        if gpus:
+            tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], 'GPU')
+
+        params['num_replicas' ] = hvd.size()
+        num_replicas = params['num_replicas']
+        params['global_batch_size'] = params['batch_size'] * num_replicas
+
+        if params['lr_scaling'] == 'linear':
+            params['learning_rate'] *= num_replicas
+
+        Path(params['model_dir']).mkdir(parents=True, exist_ok=True)
+
+        return params
+
+    def run(self, log_interval=0.5, **params):
+        params = self.setup(**params)
+
+        mlflow.log_params(params)
+
+        self._benchmark.build(**params)
+
+        LOGGER.log('Number of Replicas: {}'.format(params['num_replicas']))
+        LOGGER.log('Global Batch Size: {}'.format(params['global_batch_size']))
+        LOGGER.log('Replica Batch Size: {}'.format(params['batch_size']))
+
+        if 'train' in params['exec_mode']:
+            self._benchmark.train(**params)
+
+        if 'predict' in params['exec_mode']:
+            self._benchmark.predict(**params)
+
+        self._benchmark.save_results(**params)
+
+        mlflow.log_artifact(Path(params['model_dir']) / 'final_weights.h5')
+        mlflow.log_artifact(Path(params['model_dir']) / 'params.yml')
+
+
+def build_benchmark(model_fn, dataset, using_mpi=False):
+    if not using_mpi:
+        benchmark = Benchmark(model_fn, dataset)
+        return BenchmarkRunner(benchmark)
+    else:
+        benchmark = MultiNodeBenchmark(model_fn, dataset)
+        return MultiNodeBenchmarkRunner(benchmark)
+

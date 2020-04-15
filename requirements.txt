@@ -14,4 +14,6 @@ click-config-file
 mlflow
 psutil
 py-cpuinfo
+mpi4py
 pytest-mock
+pytest-mpi

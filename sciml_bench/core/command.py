@@ -65,12 +65,13 @@ def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
 @click.option('--log-batch', default=False, is_flag=True, help='Whether to log metrics by batch or by epoch')
 @click.option('--log-interval', default=0.5, help='Logging interval for system metrics')
 @click.option('--seed', default=42, type=int, help='Random seed to use for initialization of random state')
+@click.option('--using-mpi', default=False, is_flag=True)
 def cli(ctx, tracking_uri=None, **kwargs):
     ctx.ensure_object(dict)
     ctx.obj.update(kwargs)
 
-    # mlflow.set_tracking_uri('http://dev05.pearl.scd.stfc.ac.uk:5001')
     mlflow.set_tracking_uri(tracking_uri)
+    mlflow.set_tracking_uri('http://dev05.pearl.scd.stfc.ac.uk:5000')
     print_header()
     set_environment_variables(**kwargs)
 
