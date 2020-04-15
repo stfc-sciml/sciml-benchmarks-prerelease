@@ -1,8 +1,34 @@
 import tensorflow as tf
 import mlflow
+from mpi4py import MPI
 from threading import Timer
 from abc import abstractmethod, ABCMeta
 from sciml_bench.core.system import DeviceSpecs, HostSpec, bytesto
+
+
+class DistributedMLFlowRun:
+
+    def __init__(self):
+        self._comm = MPI.COMM_WORLD
+        self._rank = self._comm.Get_rank()
+
+    def __enter__(self):
+        """Helper function to create a mlflow run even during MPI runs"""
+        if self._rank == 0:
+            active_run = mlflow.start_run()
+            data = {'run_id' : active_run.info.run_id}
+        else:
+            data = None
+
+        data = self._comm.bcast(data, root=0)
+
+        if self._rank != 0:
+            mlflow.start_run(data['run_id'])
+
+    def __exit__(self):
+        """Helper function to end a mlflow run even during MPI runs"""
+        if self._rank == 0:
+            mlflow.end_run()
 
 class MLFlowCallback(tf.keras.callbacks.Callback):
 

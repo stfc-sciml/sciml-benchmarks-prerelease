@@ -23,6 +23,7 @@ import click_config_file
 import mlflow
 from pathlib import Path
 
+from sciml_bench.core.utils.hooks.mlflow import DistributedMLFlowRun
 from sciml_bench.core.dllogger.logger import LOGGER
 from sciml_bench.core.download import download_datasets
 
@@ -114,7 +115,8 @@ def all(ctx, data_dir, model_dir, **params):
 def dms_classifier(ctx, **kwargs):
     import sciml_bench.dms_classifier.main as dms_classifier_mod
     mlflow.set_experiment('dms_classifier')
-    with mlflow.start_run():
+
+    with DistributedMLFlowRun():
         kwargs.update(ctx.obj)
         kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'dms_classifier')
         dms_classifier_mod.main(**kwargs)
@@ -129,30 +131,14 @@ def dms_classifier(ctx, **kwargs):
 @click.option('--learning-rate', default=0.01, help='Set the learning rate')
 def em_denoise(ctx, **kwargs):
     import sciml_bench.em_denoise.main as em_denoise_mod
-    from mpi4py import MPI
-
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
 
     mlflow.set_experiment('em_denoise')
 
-    if rank == 0:
-        active_run = mlflow.start_run()
-        data = {'run_id' : active_run.info.run_id}
-    else:
-        data = None
+    with DistributedMLFlowRun():
+        kwargs.update(ctx.obj)
+        kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'em_denoise')
+        em_denoise_mod.main(**kwargs)
 
-    data = comm.bcast(data, root=0)
-
-    if rank != 0:
-        mlflow.start_run(data['run_id'])
-
-    kwargs.update(ctx.obj)
-    kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'em_denoise')
-    em_denoise_mod.main(**kwargs)
-
-    if rank == 0:
-        mlflow.end_run()
 
 @cli.command(help='Run the SLSTR Cloud Segmentation Benchmark')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
@@ -165,7 +151,8 @@ def em_denoise(ctx, **kwargs):
 def slstr_cloud(ctx, **kwargs):
     import sciml_bench.slstr_cloud.main as slstr_cloud_mod
     mlflow.set_experiment('slstr_cloud')
-    with mlflow.start_run():
+
+    with DistributedMLFlowRun():
         kwargs.update(ctx.obj)
         kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'slstr_cloud')
         slstr_cloud_mod.main(**kwargs)
