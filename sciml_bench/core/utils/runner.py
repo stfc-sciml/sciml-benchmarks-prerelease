@@ -5,7 +5,7 @@ from pathlib import Path
 
 from sciml_bench.core.dllogger.logger import LOGGER
 from sciml_bench.core.system import HostSpec, DeviceSpecs
-from sciml_bench.core.utils.hooks.mlflow import MLFlowDeviceLogger, MLFlowHostLogger
+from sciml_bench.core.utils.hooks.mlflow import MLFlowDeviceLogger, MLFlowHostLogger, MLFlowLoggerProxy
 from sciml_bench.core.utils.benchmark import Benchmark, MultiNodeBenchmark
 
 class BenchmarkRunner:
@@ -81,11 +81,36 @@ class BenchmarkRunner:
 class MultiNodeBenchmarkRunner:
 
     def __init__(self, benchmark):
+        hvd.init()
         self._benchmark = benchmark
         assert isinstance(self._benchmark, MultiNodeBenchmark), "Benchmark is not a MultiNode benchmark!"
 
+        host_spec = HostSpec()
+        self._node_name = host_spec.node_name
+
+        mlflow_logger = MLFlowLoggerProxy(self._node_name)
+
+        # Log system information if on rank 0
+        if hvd.local_rank() == 0:
+            mlflow_logger.set_tag('host_name', host_spec.name)
+            mlflow_logger.set_tag('host_node_name', host_spec.node_name)
+            mlflow_logger.set_tag('host_ip', host_spec.node_name)
+            mlflow_logger.set_tag('host_num_cores', host_spec.num_cores)
+            mlflow_logger.set_tag('host_release', host_spec.release)
+            mlflow_logger.set_tag('host_system', host_spec.system)
+            mlflow_logger.set_tags(host_spec.cpu_info)
+
+            # Log device information
+            device_specs = DeviceSpecs()
+
+            mlflow_logger.set_tag('gpu_count', device_specs.device_count)
+            mlflow_logger.set_tags(device_specs.names)
+            mlflow_logger.set_tags(device_specs.brands)
+            mlflow_logger.set_tags(device_specs.uuids)
+            mlflow_logger.set_tags({k: v for k, v in device_specs.memory.items() if 'total' in k})
+            mlflow_logger.set_tags(device_specs.is_multigpu_board)
+
     def setup(self, **params):
-        hvd.init()
 
         # Horovod: pin GPU to be used to process local rank (one GPU per process)
         gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -108,6 +133,12 @@ class MultiNodeBenchmarkRunner:
         return params
 
     def run(self, log_interval=0.5, **params):
+        host_logger = MLFlowHostLogger(name=self._node_name, interval=log_interval)
+        device_logger = MLFlowDeviceLogger(name=self._node_name, interval=log_interval)
+
+        host_logger.start()
+        device_logger.start()
+
         params = self.setup(**params)
 
         mlflow.log_params(params)
@@ -126,8 +157,13 @@ class MultiNodeBenchmarkRunner:
 
         self._benchmark.save_results(**params)
 
-        mlflow.log_artifact(Path(params['model_dir']) / 'final_weights.h5')
-        mlflow.log_artifact(Path(params['model_dir']) / 'params.yml')
+        host_logger.stop()
+        device_logger.stop()
+
+        if hvd.rank() == 0:
+            mlflow.log_artifact(Path(params['model_dir']) / 'final_weights.h5')
+            mlflow.log_artifact(Path(params['model_dir']) / 'params.yml')
+
 
 
 def build_benchmark(model_fn, dataset, using_mpi=False):

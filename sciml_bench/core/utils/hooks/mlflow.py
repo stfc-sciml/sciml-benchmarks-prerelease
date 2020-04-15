@@ -136,3 +136,18 @@ class MLFlowHostLogger(RepeatedTimer):
         self._step += 1
 
 
+class MLFlowLoggerProxy():
+
+    def __init__(self, node_name):
+        self._prefix = node_name + '_'
+
+    def set_tag(self, name, value):
+        mlflow.set_tag(self._prefix + name, value)
+
+
+    def set_tags(self, tags):
+        renamed_tags = {}
+        for key, value in tags.items():
+            renamed_tags[self._prefix + key] = value
+        mlflow.set_tags(tags)
+

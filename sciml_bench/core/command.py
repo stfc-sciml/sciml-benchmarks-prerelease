@@ -129,11 +129,30 @@ def dms_classifier(ctx, **kwargs):
 @click.option('--learning-rate', default=0.01, help='Set the learning rate')
 def em_denoise(ctx, **kwargs):
     import sciml_bench.em_denoise.main as em_denoise_mod
+    from mpi4py import MPI
+
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+
     mlflow.set_experiment('em_denoise')
-    with mlflow.start_run():
-        kwargs.update(ctx.obj)
-        kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'em_denoise')
-        em_denoise_mod.main(**kwargs)
+
+    if rank == 0:
+        active_run = mlflow.start_run()
+        data = {'run_id' : active_run.info.run_id}
+    else:
+        data = None
+
+    data = comm.bcast(data, root=0)
+
+    if rank != 0:
+        mlflow.start_run(data['run_id'])
+
+    kwargs.update(ctx.obj)
+    kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'em_denoise')
+    em_denoise_mod.main(**kwargs)
+
+    if rank == 0:
+        mlflow.end_run()
 
 @cli.command(help='Run the SLSTR Cloud Segmentation Benchmark')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)

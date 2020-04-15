@@ -135,7 +135,6 @@ class MultiNodeBenchmark:
 
         verbose = 1 if hvd.rank() == 0 else 0
 
-
         if self._model is None:
             raise RuntimeError("Model has not been built!\n \
                     Please call benchmark.build() first to compile the model!")
@@ -200,8 +199,9 @@ class MultiNodeBenchmark:
 
         hooks.append(test_profiler_hook)
 
-        mlf_callback = MLFlowCallback(self._log_batch)
-        hooks.append(mlf_callback)
+        if hvd.rank() == 0:
+            mlf_callback = MLFlowCallback(self._log_batch)
+            hooks.append(mlf_callback)
 
         predict_steps = int(np.ceil(self._dataset.test_size / params['global_batch_size']))
 
@@ -222,3 +222,17 @@ class MultiNodeBenchmark:
         self._results['test'] = test_profiler_hook.get_results()
         self._results['test'].update(metrics)
 
+    def save_results(self, **params):
+        if hvd.rank() == 0:
+            model_dir = params['model_dir']
+            results_file = Path(model_dir).joinpath('results.yml')
+
+            with results_file.open('w') as handle:
+                yaml.dump(self._results, handle)
+
+            params_file = Path(model_dir).joinpath('params.yml')
+            with params_file.open('w') as handle:
+                yaml.dump(params, handle)
+
+            weights_file = str(Path(model_dir).joinpath('final_weights.h5'))
+            self._model.save_weights(weights_file)
