@@ -14,8 +14,9 @@ def bytesto(bytes, to, bsize=1024):
 
 class HostSpec:
 
-    def __init__(self, per_device=False):
+    def __init__(self, pid=None, per_device=False):
         self._per_device = per_device
+        self._process = psutil.Process(pid)
 
     @property
     def name(self):
@@ -48,7 +49,7 @@ class HostSpec:
 
     @property
     def cpu_percent(self):
-        info = psutil.cpu_percent(percpu=self._per_device)
+        info = self._process.cpu_percent()
         if not self._per_device:
             info = [info]
 
@@ -65,7 +66,7 @@ class HostSpec:
 
     @property
     def disk_io(self):
-        info = psutil.disk_io_counters(perdisk=self._per_device)
+        info = self._process.io_counters()
         if self._per_device:
             return {'disk_' + key + '_' + k: v for key, value in info.items() for k, v in value._asdict().items()}
         else:

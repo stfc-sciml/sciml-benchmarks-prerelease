@@ -14,7 +14,6 @@ def test_host_spec():
     assert spec.num_cores == psutil.cpu_count()
     assert spec.total_memory == psutil.virtual_memory().total
 
-
 def test_device_spec():
     spec = DeviceSpec(0)
 
