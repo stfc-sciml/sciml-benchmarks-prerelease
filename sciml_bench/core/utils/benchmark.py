@@ -17,9 +17,15 @@ class Benchmark:
         self._dataset = dataset
         self._results = {}
 
-    def build(self, log_batch=False, **params):
+    def build(self, log_batch=False, loss=tf.losses.BinaryCrossentropy(), learning_rate=0.001, metrics=['accuracy'], **params):
         self._log_batch = log_batch
         self._model = self._model_fn(self._dataset.dimensions, **params)
+
+        opt = tf.optimizers.Adam(learning_rate)
+        self._model.compile(loss=loss,
+                    optimizer=opt,
+                    metrics=metrics,
+                    experimental_run_tf_function=False)
 
     def train(self, epochs=1, **params):
         if self._model is None:

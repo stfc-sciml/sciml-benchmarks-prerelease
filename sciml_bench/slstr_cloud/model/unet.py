@@ -62,10 +62,4 @@ def unet_v1(input_shape, learning_rate=0.001, **params):
 
     out = output_block(out, residual_input=skip_connections.pop(), filters=64, n_classes=2)
     model = tf.keras.Model(inputs, out)
-
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
-                  loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
-                  metrics=[
-                      'accuracy',
-                  ])
     return model

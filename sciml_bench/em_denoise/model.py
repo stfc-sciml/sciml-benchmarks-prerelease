@@ -55,5 +55,4 @@ def autoencoder(input_shape, learning_rate=0.001, **params):
     x = tf.keras.layers.Conv2D(filters=1, kernel_size=3, activation='linear', padding='same')(x)
 
     model = tf.keras.models.Model(input_layer, x)
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), loss='mse')
     return model

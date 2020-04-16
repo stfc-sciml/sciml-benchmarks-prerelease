@@ -5,6 +5,7 @@ import socket
 import cpuinfo
 import pynvml as nv
 
+
 def bytesto(bytes, to, bsize=1024):
     size = {'k' : 1, 'm': 2, 'g' : 3, 't' : 4, 'p' : 5, 'e' : 6 }
     r = float(bytes)
@@ -95,9 +96,16 @@ class HostSpec:
 class DeviceSpecs:
 
     def __init__(self):
-        nv.nvmlInit()
-        self._device_count = nv.nvmlDeviceGetCount()
-        self._specs = [DeviceSpec(i) for i in range(self.device_count)]
+
+        try:
+            # We're on a machine with Nvidia libraries
+            nv.nvmlInit()
+            self._device_count = nv.nvmlDeviceGetCount()
+            self._specs = [DeviceSpec(i) for i in range(self.device_count)]
+        except nv.NVMLError_LibraryNotFound:
+            # This device has no GPU or no Nvidia libraries are installed.
+            self._device_count = 0
+            self._specs = []
 
     @property
     def device_count(self):
@@ -146,8 +154,11 @@ class DeviceSpecs:
 class DeviceSpec:
 
     def __init__(self, index):
-        nv.nvmlInit()
-        self._handle = nv.nvmlDeviceGetHandleByIndex(index)
+        try:
+            nv.nvmlInit()
+            self._handle = nv.nvmlDeviceGetHandleByIndex(index)
+        except nv.NVMLError_LibraryNotFound:
+            pass
 
     @property
     def uuid(self):

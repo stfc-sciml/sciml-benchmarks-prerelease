@@ -110,6 +110,7 @@ def all(ctx, data_dir, model_dir, **params):
 @click.argument('data_dir')
 @click.argument('model_dir')
 @click.option('--epochs', default=50, help='Set number of epochs')
+@click.option('--loss', default='binary_crossentropy', help='Set loss function to use')
 @click.option('--batch_size', default=32, help='Set the batch size for training & test')
 @click.option('--learning-rate', default=1e-4, help='Set the learning rate')
 def dms_classifier(ctx, **kwargs):
@@ -127,6 +128,7 @@ def dms_classifier(ctx, **kwargs):
 @click.argument('data_dir')
 @click.argument('model_dir')
 @click.option('--epochs', default=10, help='Set number of epochs')
+@click.option('--loss', default='mse', help='Set loss function to use')
 @click.option('--batch_size', default=10, help='Set the batch size for training & test')
 @click.option('--learning-rate', default=0.01, help='Set the learning rate')
 def em_denoise(ctx, **kwargs):
@@ -146,6 +148,7 @@ def em_denoise(ctx, **kwargs):
 @click.argument('data_dir')
 @click.argument('model_dir')
 @click.option('--epochs', default=30, help='Set number of epochs')
+@click.option('--loss', default='binary_cross_entropy', help='Set loss function to use')
 @click.option('--batch_size', default=8, help='Set the batch size for training & test')
 @click.option('--learning-rate', default=0.001, help='Set the learning rate')
 def slstr_cloud(ctx, **kwargs):
