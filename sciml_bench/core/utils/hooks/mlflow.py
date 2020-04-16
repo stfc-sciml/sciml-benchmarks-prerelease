@@ -25,7 +25,7 @@ class DistributedMLFlowRun:
         if self._rank != 0:
             mlflow.start_run(data['run_id'])
 
-    def __exit__(self):
+    def __exit__(self, *args):
         """Helper function to end a mlflow run even during MPI runs"""
         if self._rank == 0:
             mlflow.end_run()
