@@ -12,4 +12,5 @@ sciml-bench-tf.sif: Dockerfile.tf sciml-bench-tf.cfg
 	sudo docker push $(DOCKER_REMOTE)-tf 
 	sudo singularity build $@ sciml-bench-tf.cfg
 
+.PHONY: all
 all: sciml-bench-tf.sif sciml-bench-nvidia.sif

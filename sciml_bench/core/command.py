@@ -72,7 +72,6 @@ def cli(ctx, tracking_uri=None, **kwargs):
     ctx.obj.update(kwargs)
 
     mlflow.set_tracking_uri(tracking_uri)
-    mlflow.set_tracking_uri('http://dev05.pearl.scd.stfc.ac.uk:5000')
     print_header()
     set_environment_variables(**kwargs)
 
@@ -80,8 +79,8 @@ def cli(ctx, tracking_uri=None, **kwargs):
 @cli.command(help='Run all benchmarks with default settings')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
 @click.pass_context
-@click.option('--data-dir', default=None, help='Data directory location', envvar='SCIML_BENCH_DATA_DIR')
-@click.option('--model-dir', default='./sciml_bench_out', type=str, help='Output directory for model results', envvar='SCIML_BENCH_MODEL_DIR')
+@click.option('--data-dir', default='data', help='Data directory location', envvar='SCIML_BENCH_DATA_DIR')
+@click.option('--model-dir', default='sciml-bench-out', type=str, help='Output directory for model results', envvar='SCIML_BENCH_MODEL_DIR')
 def all(ctx, data_dir, model_dir, **params):
     model_dir = Path(model_dir)
     model_dir.mkdir(parents=True, exist_ok=True)
@@ -107,8 +106,8 @@ def all(ctx, data_dir, model_dir, **params):
 @cli.command(help='Run the DMS Classifier Benchmark')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
 @click.pass_context
-@click.argument('data_dir')
-@click.argument('model_dir')
+@click.option('--data-dir', default='data/dms_classifier', envvar='SCIML_BENCH_DATA_DIR')
+@click.option('--model-dir', default='sciml-bench-out', envvar='SCIML_BENCH_MODEL_DIR')
 @click.option('--epochs', default=50, help='Set number of epochs')
 @click.option('--loss', default='binary_crossentropy', help='Set loss function to use')
 @click.option('--batch_size', default=32, help='Set the batch size for training & test')
@@ -125,8 +124,8 @@ def dms_classifier(ctx, **kwargs):
 @cli.command(help='Run the Electron Microscopy Denoise Benchmark')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
 @click.pass_context
-@click.argument('data_dir')
-@click.argument('model_dir')
+@click.option('--data-dir', default='data/em_denoise', envvar='SCIML_BENCH_DATA_DIR')
+@click.option('--model-dir', default='sciml-bench-out', envvar='SCIML_BENCH_MODEL_DIR')
 @click.option('--epochs', default=10, help='Set number of epochs')
 @click.option('--loss', default='mse', help='Set loss function to use')
 @click.option('--batch_size', default=10, help='Set the batch size for training & test')
@@ -145,8 +144,8 @@ def em_denoise(ctx, **kwargs):
 @cli.command(help='Run the SLSTR Cloud Segmentation Benchmark')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
 @click.pass_context
-@click.argument('data_dir')
-@click.argument('model_dir')
+@click.option('--data-dir', default='data/slstr_cloud', envvar='SCIML_BENCH_DATA_DIR')
+@click.option('--model-dir', default='sciml-bench-out', envvar='SCIML_BENCH_MODEL_DIR')
 @click.option('--epochs', default=30, help='Set number of epochs')
 @click.option('--loss', default='binary_cross_entropy', help='Set loss function to use')
 @click.option('--batch_size', default=8, help='Set the batch size for training & test')

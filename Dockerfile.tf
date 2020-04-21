@@ -59,10 +59,8 @@ EXPOSE 5000
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
 ENV SCIML_BENCH_DATA_DIR /data
-ENV SCIML_BENCH_MODEL_DIR /out
-ENV SCIML_BENCH_TRACKING_URI /out/mlflow
+ENV SCIML_BENCH_MODEL_DIR /sciml-bench-out
 
 RUN mkdir $SCIML_BENCH_MODEL_DIR
-RUN mkdir $SCIML_BENCH_TRACKING_URI
 
-CMD (mlflow server --host 0.0.0.0 --backend-store-uri $SCIML_BENCH_TRACKING_URI --default-artifact-root $SCIML_BENCH_TRACKING_URI &) && sciml-bench all
+CMD sciml-bench all
