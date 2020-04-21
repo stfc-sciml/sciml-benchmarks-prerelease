@@ -135,15 +135,9 @@ docker pull samueljackson/sciml-bench:latest
 
 Then you can run the benchmarks with the following command:
 ```
-sudo docker run --gpus all -v $PWD/data:/data -v $PWD/out:/out -p 5000:5000 samueljackson/sciml_bench
+sudo docker run --gpus all -v $PWD/data:/data -v $PWD/out:/sciml-bench-out samueljackson/sciml_bench
 ```
 
  - `--gpus`: specifies the number of GPUs to use from the host system
  - `-v $PWD/data:/data`: mounts the data folder on the host to the container. The part before the colon should point to location of the downloaded data
  - `-v $PWD/out:/out`:  mounts the output folder in the container to the host system. This ensures that the captured run data is saved after exection.
- - `-p 5000:5000`: binds a port address from the container to the host
-
- 
-Go and visit `localhost:5000` and watch the results roll in.
-
-
