@@ -1,6 +1,5 @@
 import tensorflow as tf
 import mlflow
-from mpi4py import MPI
 from threading import Timer
 from abc import abstractmethod, ABCMeta
 from sciml_bench.core.system import DeviceSpecs, HostSpec, bytesto
@@ -9,8 +8,13 @@ from sciml_bench.core.system import DeviceSpecs, HostSpec, bytesto
 class DistributedMLFlowRun:
 
     def __init__(self):
-        self._comm = MPI.COMM_WORLD
-        self._rank = self._comm.Get_rank()
+        try:
+            from mpi4py import MPI
+            self._comm = MPI.COMM_WORLD
+            self._rank = self._comm.Get_rank()
+        except ImportError:
+            self._comm = None
+            self._rank = 0
 
     def __enter__(self):
         """Helper function to create a mlflow run even during MPI runs"""
@@ -19,6 +23,10 @@ class DistributedMLFlowRun:
             data = {'run_id' : active_run.info.run_id}
         else:
             data = None
+
+        # If comm is none then we have not MPI support. Just quit.
+        if self._comm is None:
+            return
 
         data = self._comm.bcast(data, root=0)
 

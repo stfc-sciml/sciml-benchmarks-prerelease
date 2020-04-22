@@ -1,7 +1,11 @@
 import tensorflow as tf
 import mlflow
-import horovod.tensorflow.keras as hvd
 from pathlib import Path
+
+try:
+    import horovod.tensorflow.keras as hvd
+except ImportError:
+    pass
 
 from sciml_bench.core.dllogger.logger import LOGGER
 from sciml_bench.core.system import HostSpec, DeviceSpecs

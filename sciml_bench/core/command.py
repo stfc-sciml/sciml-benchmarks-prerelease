@@ -27,6 +27,15 @@ from sciml_bench.core.utils.hooks.mlflow import DistributedMLFlowRun
 from sciml_bench.core.dllogger.logger import LOGGER
 from sciml_bench.core.download import download_datasets
 
+def mpi_supported():
+    """Check if we can import mpi4py"""
+    try:
+        from mpi4py import MPI
+        return True
+    except ImportError:
+        return False
+
+
 def yaml_provider(file_path, cmd_name):
     with open(file_path) as config_data:
         cfg = yaml.load(config_data, yaml.SafeLoader)
@@ -70,6 +79,10 @@ def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
 def cli(ctx, tracking_uri=None, **kwargs):
     ctx.ensure_object(dict)
     ctx.obj.update(kwargs)
+
+    if kwargs['using_mpi'] and not mpi_supported():
+        click.echo("MPI support is not installed! Run pip install sciml-bench[mpi]")
+        sys.exit(-1)
 
     mlflow.set_tracking_uri(tracking_uri)
     print_header()

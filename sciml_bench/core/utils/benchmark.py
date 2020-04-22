@@ -3,8 +3,13 @@ import warnings
 warnings.filterwarnings("ignore")
 import numpy as np
 import tensorflow as tf
-import horovod.tensorflow.keras as hvd
 from pathlib import Path
+
+try:
+    import horovod.tensorflow.keras as hvd
+except ImportError:
+    pass
+
 from sciml_bench.core.dllogger import tags, LOGGER
 from sciml_bench.core.utils.hooks.mlflow import MLFlowCallback
 from sciml_bench.core.utils.hooks.profiling_hook import ProfilingHook
