@@ -37,6 +37,7 @@ class DMSDataset(DataLoader):
 
     def train_fn(self, batch_size=10):
         dataset = tf.data.Dataset.from_tensor_slices((self._train_images, self._train_labels))
+        dataset = dataset.map(lambda x, y: (x[:, :, :1], y))
         dataset = dataset.shuffle(self.train_size)
         dataset = dataset.batch(batch_size)
         dataset = dataset.repeat()
@@ -44,5 +45,6 @@ class DMSDataset(DataLoader):
 
     def test_fn(self, batch_size=10):
         dataset = tf.data.Dataset.from_tensor_slices((self._test_images, self._test_labels))
+        dataset = dataset.map(lambda x, y: (x[:, :, :1], y))
         dataset = dataset.batch(batch_size)
         return dataset

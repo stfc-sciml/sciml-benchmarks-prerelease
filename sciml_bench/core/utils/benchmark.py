@@ -29,7 +29,7 @@ class Benchmark:
         opt = tf.optimizers.Adam(learning_rate)
         self._model.compile(loss=loss,
                     optimizer=opt,
-                    metrics=metrics,
+                    metrics=list(metrics),
                     experimental_run_tf_function=False)
 
     def train(self, epochs=1, **params):

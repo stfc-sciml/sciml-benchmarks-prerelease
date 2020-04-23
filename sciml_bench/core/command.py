@@ -121,10 +121,11 @@ def all(ctx, data_dir, model_dir, **params):
 @click.pass_context
 @click.option('--data-dir', default='data/dms_classifier', envvar='SCIML_BENCH_DATA_DIR')
 @click.option('--model-dir', default='sciml-bench-out', envvar='SCIML_BENCH_MODEL_DIR')
-@click.option('--epochs', default=50, help='Set number of epochs')
+@click.option('--epochs', default=10, help='Set number of epochs')
 @click.option('--loss', default='binary_crossentropy', help='Set loss function to use')
-@click.option('--batch_size', default=32, help='Set the batch size for training & test')
+@click.option('--batch_size', default=256, help='Set the batch size for training & test')
 @click.option('--learning-rate', default=1e-4, help='Set the learning rate')
+@click.option('--metrics', '-m', default=['accuracy'], multiple=True, help='Set the metrics to output')
 def dms_classifier(ctx, **kwargs):
     import sciml_bench.dms_classifier.main as dms_classifier_mod
     mlflow.set_experiment('dms_classifier')
@@ -141,8 +142,9 @@ def dms_classifier(ctx, **kwargs):
 @click.option('--model-dir', default='sciml-bench-out', envvar='SCIML_BENCH_MODEL_DIR')
 @click.option('--epochs', default=10, help='Set number of epochs')
 @click.option('--loss', default='mse', help='Set loss function to use')
-@click.option('--batch_size', default=10, help='Set the batch size for training & test')
+@click.option('--batch_size', default=256, help='Set the batch size for training & test')
 @click.option('--learning-rate', default=0.01, help='Set the learning rate')
+@click.option('--metrics', '-m', default=[], multiple=True, help='Set the metrics to output')
 def em_denoise(ctx, **kwargs):
     import sciml_bench.em_denoise.main as em_denoise_mod
 
@@ -160,9 +162,10 @@ def em_denoise(ctx, **kwargs):
 @click.option('--data-dir', default='data/slstr_cloud', envvar='SCIML_BENCH_DATA_DIR')
 @click.option('--model-dir', default='sciml-bench-out', envvar='SCIML_BENCH_MODEL_DIR')
 @click.option('--epochs', default=30, help='Set number of epochs')
-@click.option('--loss', default='binary_cross_entropy', help='Set loss function to use')
-@click.option('--batch_size', default=8, help='Set the batch size for training & test')
+@click.option('--loss', default='binary_crossentropy', help='Set loss function to use')
+@click.option('--batch_size', default=6, help='Set the batch size for training & test')
 @click.option('--learning-rate', default=0.001, help='Set the learning rate')
+@click.option('--metrics', '-m', default=['accuracy'], multiple=True, help='Set the metrics to output')
 def slstr_cloud(ctx, **kwargs):
     import sciml_bench.slstr_cloud.main as slstr_cloud_mod
     mlflow.set_experiment('slstr_cloud')
