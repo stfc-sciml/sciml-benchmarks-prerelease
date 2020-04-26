@@ -183,5 +183,5 @@ class MLFlowLoggerProxy():
         renamed_tags = {}
         for key, value in tags.items():
             renamed_tags[self._prefix + key] = value
-        mlflow.set_tags(tags)
+        mlflow.set_tags(renamed_tags)
 

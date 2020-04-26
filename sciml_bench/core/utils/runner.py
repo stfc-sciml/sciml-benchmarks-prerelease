@@ -85,7 +85,6 @@ class BenchmarkRunner:
 class MultiNodeBenchmarkRunner:
 
     def __init__(self, benchmark):
-        hvd.init()
         self._benchmark = benchmark
         assert isinstance(self._benchmark, MultiNodeBenchmark), "Benchmark is not a MultiNode benchmark!"
 
@@ -116,14 +115,15 @@ class MultiNodeBenchmarkRunner:
 
     def setup(self, **params):
 
-        # Horovod: pin GPU to be used to process local rank (one GPU per process)
-        gpus = tf.config.experimental.list_physical_devices('GPU')
+        if hvd.mpi_enabled():
+            # Horovod: pin GPU to be used to process local rank (one GPU per process)
+            gpus = tf.config.experimental.list_physical_devices('GPU')
 
-        for gpu in gpus:
-            tf.config.experimental.set_memory_growth(gpu, True)
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
 
-        if gpus:
-            tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], 'GPU')
+            if gpus:
+                tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], 'GPU')
 
         params['num_replicas' ] = hvd.size()
         num_replicas = params['num_replicas']
@@ -147,11 +147,19 @@ class MultiNodeBenchmarkRunner:
 
         mlflow.log_params(params)
 
-        self._benchmark.build(**params)
+        if hvd.mpi_enabled():
+            self._benchmark.build(**params)
+        else:
+            # Single node, no MPI, scale to use as many GPUs as we can
+            strategy = tf.distribute.MirroredStrategy()
+            with strategy.scope():
+                self._benchmark.build(**params)
 
-        LOGGER.log('Number of Replicas: {}'.format(params['num_replicas']))
-        LOGGER.log('Global Batch Size: {}'.format(params['global_batch_size']))
-        LOGGER.log('Replica Batch Size: {}'.format(params['batch_size']))
+        if hvd.rank() == 0:
+            LOGGER.log('MPI Enabled: ', hvd.mpi_enabled())
+            LOGGER.log('Number of Replicas: {}'.format(params['num_replicas']))
+            LOGGER.log('Global Batch Size: {}'.format(params['global_batch_size']))
+            LOGGER.log('Replica Batch Size: {}'.format(params['batch_size']))
 
         if 'train' in params['exec_mode']:
             self._benchmark.train(**params)

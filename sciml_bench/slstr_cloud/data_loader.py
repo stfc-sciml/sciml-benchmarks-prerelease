@@ -20,6 +20,7 @@ import h5py
 import tensorflow as tf
 import numpy as np
 import xarray as xr
+import horovod.tensorflow as hvd
 from scipy import interpolate
 
 from sciml_bench.core.data_loader import DataLoader
@@ -112,24 +113,26 @@ class SLSTRDataLoader(DataLoader):
                                                  output_types=types,
                                                  output_shapes=shapes,
                                                  args=(path, ))
+        dataset = dataset.shard(hvd.size(), hvd.rank())
         return dataset
 
     def train_fn(self, batch_size=8):
         """Input function for training"""
         dataset = tf.data.Dataset.from_tensor_slices(self._train_images)
         dataset = dataset.shuffle(1000)
-        dataset = dataset.interleave(self._generator, cycle_length=2, num_parallel_calls=2)
+        dataset = dataset.shard(hvd.size(), hvd.rank())
+        dataset = dataset.interleave(self._generator, cycle_length=16, num_parallel_calls=16)
         dataset = dataset.unbatch()
         dataset = dataset.shuffle(batch_size * 3)
         dataset = dataset.prefetch(batch_size * 3)
         dataset = dataset.batch(batch_size)
-        dataset = dataset.cache()
         dataset = dataset.repeat()
         return dataset
 
     def test_fn(self, batch_size=8):
         dataset = tf.data.Dataset.from_tensor_slices(self._test_images)
-        dataset = dataset.interleave(self._generator, cycle_length=2, num_parallel_calls=2)
+        dataset = dataset.shard(hvd.size(), hvd.rank())
+        dataset = dataset.interleave(self._generator, cycle_length=16, num_parallel_calls=16)
         dataset = dataset.unbatch()
         dataset = dataset.batch(batch_size)
         dataset = dataset.prefetch(batch_size)
@@ -245,8 +248,8 @@ class Sentinel3Dataset(DataLoader):
         dataset = dataset.shuffle(1000)
         dataset = dataset.interleave(self._generator, cycle_length=16, num_parallel_calls=16)
         dataset = dataset.unbatch()
-        dataset = dataset.shuffle(batch_size * 3)
-        dataset = dataset.prefetch(batch_size * 3)
+        dataset = dataset.prefetch(batch_size*2)
+        dataset = dataset.shuffle(batch_size*2)
         dataset = dataset.batch(batch_size)
         dataset = dataset.cache()
         dataset = dataset.repeat()

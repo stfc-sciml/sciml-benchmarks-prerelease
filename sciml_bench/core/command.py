@@ -3,7 +3,7 @@ import os
 # Optimization flags
 os.environ['CUDA_CACHE_DISABLE'] = '0'
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 
 os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
 
@@ -22,6 +22,7 @@ import click
 import click_config_file
 import mlflow
 from pathlib import Path
+import horovod.tensorflow as hvd
 
 from sciml_bench.core.utils.hooks.mlflow import DistributedMLFlowRun
 from sciml_bench.core.dllogger.logger import LOGGER
@@ -30,6 +31,7 @@ from sciml_bench.core.download import download_datasets
 def mpi_supported():
     """Check if we can import mpi4py"""
     try:
+        assert hvd.mpi_threads_supported()
         from mpi4py import MPI
         return True
     except ImportError:
@@ -77,6 +79,7 @@ def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
 @click.option('--seed', default=42, type=int, help='Random seed to use for initialization of random state')
 @click.option('--using-mpi', default=False, is_flag=True)
 def cli(ctx, tracking_uri=None, **kwargs):
+    hvd.init()
     ctx.ensure_object(dict)
     ctx.obj.update(kwargs)
 
@@ -123,7 +126,7 @@ def all(ctx, data_dir, model_dir, **params):
 @click.option('--model-dir', default='sciml-bench-out', envvar='SCIML_BENCH_MODEL_DIR')
 @click.option('--epochs', default=10, help='Set number of epochs')
 @click.option('--loss', default='binary_crossentropy', help='Set loss function to use')
-@click.option('--batch_size', default=256, help='Set the batch size for training & test')
+@click.option('--batch-size', default=256, help='Set the batch size for training & test')
 @click.option('--learning-rate', default=1e-4, help='Set the learning rate')
 @click.option('--metrics', '-m', default=['accuracy'], multiple=True, help='Set the metrics to output')
 def dms_classifier(ctx, **kwargs):
@@ -142,7 +145,7 @@ def dms_classifier(ctx, **kwargs):
 @click.option('--model-dir', default='sciml-bench-out', envvar='SCIML_BENCH_MODEL_DIR')
 @click.option('--epochs', default=10, help='Set number of epochs')
 @click.option('--loss', default='mse', help='Set loss function to use')
-@click.option('--batch_size', default=256, help='Set the batch size for training & test')
+@click.option('--batch-size', default=256, help='Set the batch size for training & test')
 @click.option('--learning-rate', default=0.01, help='Set the learning rate')
 @click.option('--metrics', '-m', default=[], multiple=True, help='Set the metrics to output')
 def em_denoise(ctx, **kwargs):
@@ -163,7 +166,7 @@ def em_denoise(ctx, **kwargs):
 @click.option('--model-dir', default='sciml-bench-out', envvar='SCIML_BENCH_MODEL_DIR')
 @click.option('--epochs', default=30, help='Set number of epochs')
 @click.option('--loss', default='binary_crossentropy', help='Set loss function to use')
-@click.option('--batch_size', default=6, help='Set the batch size for training & test')
+@click.option('--batch-size', default=6, help='Set the batch size for training & test')
 @click.option('--learning-rate', default=0.001, help='Set the learning rate')
 @click.option('--metrics', '-m', default=['accuracy'], multiple=True, help='Set the metrics to output')
 def slstr_cloud(ctx, **kwargs):

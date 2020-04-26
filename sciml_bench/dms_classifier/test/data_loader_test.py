@@ -1,10 +1,12 @@
 import pytest
+import horovod.tensorflow as hvd
 from pathlib import Path
 from sciml_bench.dms_classifier.constants import IMG_HEIGHT, IMG_WIDTH, N_CHANNELS
 from sciml_bench.dms_classifier.data_loader import DMSDataset
 
 @pytest.fixture(scope='module')
 def data_loader():
+    hvd.init()
     data_dir = Path('data/dms_classifier')
     data_loader = DMSDataset(data_dir)
     return data_loader

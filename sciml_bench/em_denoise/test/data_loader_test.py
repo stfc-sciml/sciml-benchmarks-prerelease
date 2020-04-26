@@ -1,10 +1,12 @@
 import pytest
+import horovod.tensorflow as hvd
 from pathlib import Path
 from sciml_bench.em_denoise.constants import IMG_SIZE
 from sciml_bench.em_denoise.data_loader import EMGrapheneDataset
 
 @pytest.fixture(scope='module')
 def data_loader():
+    hvd.init()
     data_dir = Path('data/em_denoise')
     data_loader = EMGrapheneDataset(data_dir)
     return data_loader

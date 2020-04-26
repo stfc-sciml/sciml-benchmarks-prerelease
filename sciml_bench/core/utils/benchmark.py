@@ -1,6 +1,4 @@
 import yaml
-import warnings
-warnings.filterwarnings("ignore")
 import numpy as np
 import tensorflow as tf
 from pathlib import Path
@@ -221,7 +219,8 @@ class MultiNodeBenchmark:
         LOGGER.log(tags.RUN_START)
 
         dataset = self._dataset.test_fn(params['global_batch_size'])
-        metrics = self._model.evaluate(dataset, steps=predict_steps, callbacks=hooks)
+        verbose = 1 if hvd.rank() == 0 else 0
+        metrics = self._model.evaluate(dataset, steps=predict_steps, callbacks=hooks, verbose=verbose)
 
         # Handle special case: only metric is the loss
         metrics = metrics if isinstance(metrics, list) else [metrics]

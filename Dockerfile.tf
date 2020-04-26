@@ -53,7 +53,7 @@ RUN pip install -r /requirements.txt
 ADD . /workspace/
 WORKDIR /workspace/
 
-RUN pip install -e . 
+RUN pip install -e ".[mpi]" 
 
 EXPOSE 5000
 ENV LC_ALL=C.UTF-8
