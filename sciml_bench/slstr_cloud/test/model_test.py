@@ -18,5 +18,6 @@ def test_unet_v1_backprop():
     X = np.random.random((1, 128, 128, 2))
     Y = np.random.randint(0, 1, size=(1, 128, 128, 2))
     model = unet_v1((128, 128, 2), learning_rate=0.001)
+    model.compile(loss='binary_crossentropy', optimizer='adam')
     history = model.fit(X, Y)
     assert isinstance(history, tf.keras.callbacks.History)

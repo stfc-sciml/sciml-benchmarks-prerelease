@@ -39,10 +39,6 @@ class BenchmarkRunner:
     def setup(self, **params):
         num_replicas = params['num_replicas']
         params['global_batch_size'] = params['batch_size'] * num_replicas
-
-        if params['lr_scaling'] == 'linear':
-            params['learning_rate'] *= num_replicas
-
         Path(params['model_dir']).mkdir(parents=True, exist_ok=True)
         return params
 
@@ -114,24 +110,18 @@ class MultiNodeBenchmarkRunner:
             mlflow_logger.set_tags(device_specs.is_multigpu_board)
 
     def setup(self, **params):
+        # Horovod: pin GPU to be used to process local rank (one GPU per process)
+        gpus = tf.config.experimental.list_physical_devices('GPU')
 
-        if hvd.mpi_enabled():
-            # Horovod: pin GPU to be used to process local rank (one GPU per process)
-            gpus = tf.config.experimental.list_physical_devices('GPU')
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
 
-            for gpu in gpus:
-                tf.config.experimental.set_memory_growth(gpu, True)
-
-            if gpus:
-                tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], 'GPU')
+        if gpus:
+            tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], 'GPU')
 
         params['num_replicas' ] = hvd.size()
         num_replicas = params['num_replicas']
         params['global_batch_size'] = params['batch_size'] * num_replicas
-
-        if params['lr_scaling'] == 'linear':
-            params['learning_rate'] *= num_replicas
-
         Path(params['model_dir']).mkdir(parents=True, exist_ok=True)
 
         return params
@@ -147,13 +137,7 @@ class MultiNodeBenchmarkRunner:
 
         mlflow.log_params(params)
 
-        if hvd.mpi_enabled():
-            self._benchmark.build(**params)
-        else:
-            # Single node, no MPI, scale to use as many GPUs as we can
-            strategy = tf.distribute.MirroredStrategy()
-            with strategy.scope():
-                self._benchmark.build(**params)
+        self._benchmark.build(**params)
 
         if hvd.rank() == 0:
             LOGGER.log('MPI Enabled: ', hvd.mpi_enabled())
@@ -175,7 +159,6 @@ class MultiNodeBenchmarkRunner:
         if hvd.rank() == 0:
             mlflow.log_artifact(Path(params['model_dir']) / 'final_weights.h5')
             mlflow.log_artifact(Path(params['model_dir']) / 'params.yml')
-
 
 
 def build_benchmark(model_fn, dataset, using_mpi=False):

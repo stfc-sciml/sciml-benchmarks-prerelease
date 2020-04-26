@@ -18,5 +18,6 @@ def test_small_cnn_classifier_backprop():
     X = np.random.random((1, 128, 128, 1))
     Y = np.random.random((1, 1))
     model = small_cnn_classifier((128, 128, 1), learning_rate=0.001)
+    model.compile(loss='binary_crossentropy', optimizer='adam')
     history = model.fit(X, Y)
     assert isinstance(history, tf.keras.callbacks.History)

@@ -20,7 +20,7 @@ setup(
     packages=find_packages(),
     install_requires=dependancies,
     extras_require={
-        'mpi': ['mpi4py', 'horovod']
+        'mpi': ['mpi4py']
         },
     entry_points={
         'console_scripts': ['sciml-bench=sciml_bench.core.command:cli'],

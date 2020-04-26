@@ -2,12 +2,7 @@ import yaml
 import numpy as np
 import tensorflow as tf
 from pathlib import Path
-
-try:
-    import horovod.tensorflow.keras as hvd
-except ImportError:
-    pass
-
+import horovod.tensorflow.keras as hvd
 from sciml_bench.core.dllogger import tags, LOGGER
 from sciml_bench.core.utils.hooks.mlflow import MLFlowCallback
 from sciml_bench.core.utils.hooks.profiling_hook import ProfilingHook
@@ -125,7 +120,7 @@ class MultiNodeBenchmark:
         self._dataset = dataset
         self._results = {}
 
-    def build(self, log_batch=False, loss=tf.losses.BinaryCrossentropy(), learning_rate=0.001, **params):
+    def build(self, log_batch=False, loss=tf.losses.BinaryCrossentropy(), learning_rate=0.001, metrics=['accuracy'], **params):
         self._log_batch = log_batch
 
         # Horovod: adjust learning rate based on number of GPUs.
@@ -137,10 +132,10 @@ class MultiNodeBenchmark:
 
         self._model.compile(loss=loss,
                     optimizer=opt,
-                    metrics=['accuracy'],
+                    metrics=metrics,
                     experimental_run_tf_function=False)
 
-    def train(self, epochs=1, **params):
+    def train(self, epochs=1, lr_warmup=3, **params):
 
         verbose = 1 if hvd.rank() == 0 else 0
 
@@ -154,7 +149,7 @@ class MultiNodeBenchmark:
         hooks = [
             hvd.callbacks.BroadcastGlobalVariablesCallback(0),
             hvd.callbacks.MetricAverageCallback(),
-            # hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=3, verbose=1),
+            hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=lr_warmup, verbose=1),
         ]
 
         # Add hook for capturing Img/s and duration
@@ -191,7 +186,7 @@ class MultiNodeBenchmark:
 
         self._results['train'] = train_profiler_hook.get_results()
 
-    def predict(self, **params):
+    def predict(self, lr_warmup=3, **params):
         if self._model is None:
             raise RuntimeError("Model has not been built!\n \
                     Please call benchmark.build() first to compile the model!")
@@ -203,7 +198,7 @@ class MultiNodeBenchmark:
         hooks = [
             hvd.callbacks.BroadcastGlobalVariablesCallback(0),
             hvd.callbacks.MetricAverageCallback(),
-            # hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=3, verbose=1),
+            hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=lr_warmup, verbose=1),
         ]
 
         hooks.append(test_profiler_hook)

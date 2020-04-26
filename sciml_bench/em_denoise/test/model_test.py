@@ -17,5 +17,6 @@ def test_autoencoder_feed_forward():
 def test_autoencoder_backprop():
     X = np.random.random((1, 128, 128, 1))
     model = autoencoder((128, 128, 1), learning_rate=0.001)
+    model.compile(loss='mse', optimizer='adam')
     history = model.fit(X, X)
     assert isinstance(history, tf.keras.callbacks.History)

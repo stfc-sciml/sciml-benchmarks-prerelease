@@ -22,14 +22,14 @@ def test_create_benchmark(mocked_mlflow):
 def test_build_benchmark(tmpdir, mocked_mlflow):
     data_loader = FakeDataLoader((10, 10, 3), (1, ))
 
-    cfg = dict(batch_size=10, lr_scaling='none', model_dir=tmpdir)
+    cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir)
     benchmark = Benchmark(fake_model_fn, data_loader)
     benchmark.build(**cfg)
 
 def test_train_benchmark(tmpdir, mocked_mlflow):
     data_loader = FakeDataLoader((10, 10, 3), (1, ))
 
-    cfg = dict(batch_size=10, lr_scaling='none', model_dir=tmpdir, global_batch_size=10, num_replicas=1, epochs=1)
+    cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir, global_batch_size=10, num_replicas=1, epochs=1)
     benchmark = Benchmark(fake_model_fn, data_loader)
     benchmark.build(**cfg)
     benchmark.train(**cfg)
@@ -37,39 +37,35 @@ def test_train_benchmark(tmpdir, mocked_mlflow):
 def test_predict_benchmark(tmpdir, mocked_mlflow):
     data_loader = FakeDataLoader((10, 10, 3), (1, ))
 
-    cfg = dict(batch_size=10, lr_scaling='none', model_dir=tmpdir, global_batch_size=10, num_replicas=1, epochs=1)
+    cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir, global_batch_size=10, num_replicas=1, epochs=1)
     benchmark = Benchmark(fake_model_fn, data_loader)
     benchmark.build(**cfg)
     benchmark.predict(**cfg)
 
-@pytest.mark.mpi
 def test_create_multi_node_benchmark(mocked_mlflow):
     data_loader = FakeDataLoader((10, 10, 3), (1, ))
     benchmark = MultiNodeBenchmark(fake_model_fn, data_loader)
     assert isinstance(benchmark, MultiNodeBenchmark)
 
-@pytest.mark.mpi
 def test_build_multi_node_benchmark(tmpdir, mocked_mlflow):
     data_loader = FakeDataLoader((10, 10, 3), (1, ))
 
-    cfg = dict(batch_size=10, lr_scaling='none', model_dir=tmpdir)
+    cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir)
     benchmark = Benchmark(fake_model_fn, data_loader)
     benchmark.build(**cfg)
 
-@pytest.mark.mpi
 def test_train_multi_node_benchmark(tmpdir, mocked_mlflow):
     data_loader = FakeDataLoader((10, 10, 3), (1, ))
 
-    cfg = dict(batch_size=10, lr_scaling='none', model_dir=tmpdir, global_batch_size=10, num_replicas=1, epochs=1)
+    cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir, global_batch_size=10, num_replicas=1, epochs=1)
     benchmark = Benchmark(fake_model_fn, data_loader)
     benchmark.build(**cfg)
     benchmark.train(**cfg)
 
-@pytest.mark.mpi
 def test_predict_multi_node_benchmark(tmpdir, mocked_mlflow):
     data_loader = FakeDataLoader((10, 10, 3), (1, ))
 
-    cfg = dict(batch_size=10, lr_scaling='none', model_dir=tmpdir, global_batch_size=10, num_replicas=1, epochs=1)
+    cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir, global_batch_size=10, num_replicas=1, epochs=1)
     benchmark = Benchmark(fake_model_fn, data_loader)
     benchmark.build(**cfg)
     benchmark.predict(**cfg)

@@ -28,36 +28,27 @@ from sciml_bench.core.utils.hooks.mlflow import DistributedMLFlowRun
 from sciml_bench.core.dllogger.logger import LOGGER
 from sciml_bench.core.download import download_datasets
 
-def mpi_supported():
-    """Check if we can import mpi4py"""
-    try:
-        assert hvd.mpi_threads_supported()
-        from mpi4py import MPI
-        return True
-    except ImportError:
-        return False
-
-
 def yaml_provider(file_path, cmd_name):
     with open(file_path) as config_data:
         cfg = yaml.load(config_data, yaml.SafeLoader)
         return cfg
 
 def print_header():
-    text = """
+    if hvd.rank() == 0:
+        text = """
 
-           _           _   _                     _
-          (_)         | | | |                   | |
-  ___  ___ _ _ __ ___ | | | |__   ___ _ __   ___| |__
- / __|/ __| | '_ ` _ \| | | '_ \ / _ \ '_ \ / __| '_ \\
- \__ \ (__| | | | | | | | | |_) |  __/ | | | (__| | | |
- |___/\___|_|_| |_| |_|_| |_.__/ \___|_| |_|\___|_| |_|
+               _           _   _                     _
+              (_)         | | | |                   | |
+      ___  ___ _ _ __ ___ | | | |__   ___ _ __   ___| |__
+     / __|/ __| | '_ ` _ \| | | '_ \ / _ \ '_ \ / __| '_ \\
+     \__ \ (__| | | | | | | | | |_) |  __/ | | | (__| | | |
+     |___/\___|_|_| |_| |_|_| |_.__/ \___|_| |_|\___|_| |_|
 
 
 
-    """
-    sys.stdout.write(text)
-    sys.stdout.write("\n\n")
+        """
+        sys.stdout.write(text)
+        sys.stdout.write("\n\n")
 
 def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
     if cpu_only:
@@ -70,22 +61,17 @@ def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
 @click.group()
 @click.pass_context
 @click.option('--tracking-uri', default=None, type=str, help='Tracking URI for MLFlow', envvar='SCIML_BENCH_TRACKING_URI')
-@click.option('--lr-scaling', default='none', type=click.Choice(['linear', 'none']), help='How to scale the learning rate at larger batch sizes')
+@click.option('--lr-warmup', default=3, type=int, help='Number of epochs over which to scale the learning rate.')
 @click.option('--cpu-only', default=False, is_flag=True, help='Disable GPU execution')
 @click.option('--use-amp', default=False, is_flag=True, help='Enable Automatic Mixed Precision')
 @click.option('--exec-mode', default='train_and_predict', type=click.Choice(['train', 'train_and_predict', 'predict']), help='Set the execution mode')
 @click.option('--log-batch', default=False, is_flag=True, help='Whether to log metrics by batch or by epoch')
 @click.option('--log-interval', default=0.5, help='Logging interval for system metrics')
 @click.option('--seed', default=42, type=int, help='Random seed to use for initialization of random state')
-@click.option('--using-mpi', default=False, is_flag=True)
 def cli(ctx, tracking_uri=None, **kwargs):
     hvd.init()
     ctx.ensure_object(dict)
     ctx.obj.update(kwargs)
-
-    if kwargs['using_mpi'] and not mpi_supported():
-        click.echo("MPI support is not installed! Run pip install sciml-bench[mpi]")
-        sys.exit(-1)
 
     mlflow.set_tracking_uri(tracking_uri)
     print_header()
