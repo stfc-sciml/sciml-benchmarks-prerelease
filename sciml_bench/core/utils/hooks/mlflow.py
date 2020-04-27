@@ -35,8 +35,7 @@ class DistributedMLFlowRun:
 
     def __exit__(self, *args):
         """Helper function to end a mlflow run even during MPI runs"""
-        if self._rank == 0:
-            mlflow.end_run()
+        mlflow.end_run()
 
 class MLFlowCallback(tf.keras.callbacks.Callback):
 
