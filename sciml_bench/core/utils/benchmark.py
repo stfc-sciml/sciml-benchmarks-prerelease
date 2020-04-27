@@ -172,7 +172,7 @@ class MultiNodeBenchmark:
         LOGGER.log('Epoch contains {} steps'.format(spe))
 
 
-        dataset = self._dataset.train_fn(params['global_batch_size'])
+        dataset = self._dataset.train_fn(params['batch_size'])
 
         LOGGER.log(tags.RUN_START)
 
@@ -213,7 +213,7 @@ class MultiNodeBenchmark:
         LOGGER.log('Predicting for {} steps'.format(predict_steps))
         LOGGER.log(tags.RUN_START)
 
-        dataset = self._dataset.test_fn(params['global_batch_size'])
+        dataset = self._dataset.test_fn(params['batch_size'])
         verbose = 1 if hvd.rank() == 0 else 0
         metrics = self._model.evaluate(dataset, steps=predict_steps, callbacks=hooks, verbose=verbose)
 

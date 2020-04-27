@@ -94,16 +94,13 @@ def all(ctx, data_dir, model_dir, **params):
         sys.exit()
 
     LOGGER.info("Running DMS Classifier Benchmark")
-    params = yaml_provider('configs/dms_classifier.yml', None)
-    ctx.invoke(dms_classifier, data_dir=data_dir / 'dms_classifier', model_dir=model_dir, **params)
+    ctx.invoke(dms_classifier, data_dir=data_dir / 'dms_classifier', model_dir=model_dir)
 
     LOGGER.info("Running EM Denoise Benchmark")
-    params = yaml_provider('configs/em_denoise.yml', None)
-    ctx.invoke(em_denoise, data_dir=data_dir / 'em_denoise', model_dir=model_dir, **params)
+    ctx.invoke(em_denoise, data_dir=data_dir / 'em_denoise', model_dir=model_dir)
 
     LOGGER.info("Running SLSTR Cloud Segmentation Benchmark")
-    params = yaml_provider('configs/slstr_cloud.yml', None)
-    ctx.invoke(slstr_cloud, data_dir=data_dir / 'slstr_cloud', model_dir=model_dir, **params)
+    ctx.invoke(slstr_cloud, data_dir=data_dir / 'slstr_cloud', model_dir=model_dir)
 
 @cli.command(help='Run the DMS Classifier Benchmark')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)

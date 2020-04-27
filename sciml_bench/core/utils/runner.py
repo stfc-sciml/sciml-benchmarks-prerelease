@@ -56,7 +56,8 @@ class BenchmarkRunner:
 
         mlflow.log_params(params)
 
-        with strategy.scope():
+        eith strategy.scope():
+        dataset = dataset.batch(batch_size)
             self._benchmark.build(**params)
 
         LOGGER.log('Number of Replicas: {}'.format(params['num_replicas']))
@@ -161,7 +162,7 @@ class MultiNodeBenchmarkRunner:
             mlflow.log_artifact(Path(params['model_dir']) / 'params.yml')
 
 
-def build_benchmark(model_fn, dataset, using_mpi=False):
+def build_benchmark(model_fn, dataset, using_mpi=True):
     if not using_mpi:
         benchmark = Benchmark(model_fn, dataset)
         return BenchmarkRunner(benchmark)
