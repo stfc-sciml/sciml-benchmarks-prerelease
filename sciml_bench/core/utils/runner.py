@@ -56,8 +56,7 @@ class BenchmarkRunner:
 
         mlflow.log_params(params)
 
-        eith strategy.scope():
-        dataset = dataset.batch(batch_size)
+        with strategy.scope():
             self._benchmark.build(**params)
 
         LOGGER.log('Number of Replicas: {}'.format(params['num_replicas']))

@@ -119,6 +119,7 @@ def dms_classifier(ctx, **kwargs):
     with DistributedMLFlowRun():
         kwargs.update(ctx.obj)
         kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'dms_classifier')
+        kwargs['metrics'] = list(kwargs['metrics'])
         dms_classifier_mod.main(**kwargs)
 
 @cli.command(help='Run the Electron Microscopy Denoise Benchmark')
@@ -139,6 +140,7 @@ def em_denoise(ctx, **kwargs):
     with DistributedMLFlowRun():
         kwargs.update(ctx.obj)
         kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'em_denoise')
+        kwargs['metrics'] = list(kwargs['metrics'])
         em_denoise_mod.main(**kwargs)
 
 
@@ -159,6 +161,7 @@ def slstr_cloud(ctx, **kwargs):
     with DistributedMLFlowRun():
         kwargs.update(ctx.obj)
         kwargs['model_dir'] = str(Path(kwargs['model_dir']) / 'slstr_cloud')
+        kwargs['metrics'] = list(kwargs['metrics'])
         slstr_cloud_mod.main(**kwargs)
 
 @cli.command(help='Download benchmark datasets from remote store')
@@ -170,4 +173,4 @@ def download(*args, **kwargs):
 
 
 if __name__ == "__main__":
-    cli(auto_envvar_prefix='SCIML_BENCH', params={})
+    cli(auto_envvar_prefix='SCIML_BENCH')
