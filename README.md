@@ -58,7 +58,7 @@ To run a specific benchmark use the following:
 sciml-bench <benchmark-name>
 ```
 
-For example, to run the the `em_denoise` benchmark the syntax would be:
+For example, to run the the `em-denoise` benchmark the syntax would be:
 
 ```
 sciml-bench em_denoise
@@ -76,7 +76,7 @@ The parameters for a benchmark can also be passed with a configuration YAML file
 using the `--config` option. For example:
 
 ```
-sciml-bench em_denoise --config config.yml
+sciml-bench em-denoise --config config.yml
 ```
 
 Some examples of the syntax for configuration files can be found in the 
@@ -87,7 +87,7 @@ Some examples of the syntax for configuration files can be found in the
 First pull the image from singularity hub
 
 ```bash
-singularity pull library://sljack/default/sciml-bench-tf
+singularity pull library://sljack/sciml/sciml-bench-tf
 ```
 
 Then run all the benchmarks with the following command:
@@ -99,13 +99,13 @@ singularity run --nv sciml-bench-tf.sif
 Run induvidual benchmarks using: 
 
 ```bash
-singularity run --nv sciml-bench-tf.sif <benchmark-name>
+singularity run --nv sciml-bench-tf.sif sciml-bench <benchmark-name>
 ```
 
 For example to run the Electron Microscopy denoise benchmark:
 
 ```bash
-singularity run --nv sciml-bench-tf.sif em_denoise
+singularity run --nv sciml-bench-tf.sif sciml-bench em-denoise
 ```
 
 ### Using the Docker container
