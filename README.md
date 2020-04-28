@@ -99,13 +99,13 @@ singularity run --nv sciml-bench-tf.sif
 Run induvidual benchmarks using: 
 
 ```bash
-singularity run --nv sciml-bench-tf.sif <benchmark-name>
+singularity run --nv sciml-bench-tf.sif sciml-bench <benchmark-name>
 ```
 
 For example to run the Electron Microscopy denoise benchmark:
 
 ```bash
-singularity run --nv sciml-bench-tf.sif em-denoise
+singularity run --nv sciml-bench-tf.sif sciml-bench em-denoise
 ```
 
 ### Using the Docker container
