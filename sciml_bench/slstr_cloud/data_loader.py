@@ -37,6 +37,9 @@ class SLSTRDataLoader(DataLoader):
         self._test_images = Path(self._data_dir).joinpath('test').glob('S3A*.hdf')
         self._test_images = list(map(str, self._test_images))
 
+        assert len(self._train_images) > 0, "Could not find any training data!"
+        assert len(self._test_images) > 0, "Could not find any test data!"
+
         self._seed = seed
 
     @property
@@ -52,7 +55,7 @@ class SLSTRDataLoader(DataLoader):
         return len(self._test_images) * PATCHES_PER_IMAGE
 
     def _load_data(self, path):
-        with h5py.File(path) as handle:
+        with h5py.File(path, 'r') as handle:
             refs = handle['refs'][:]
             bts = handle['bts'][:]
             msk = handle['bayes'][:]
@@ -113,21 +116,19 @@ class SLSTRDataLoader(DataLoader):
                                                  output_types=types,
                                                  output_shapes=shapes,
                                                  args=(path, ))
-        dataset = dataset.shard(hvd.size(), hvd.rank())
         return dataset
 
     def train_fn(self, batch_size=8):
         """Input function for training"""
         dataset = tf.data.Dataset.from_tensor_slices(self._train_images)
-        dataset = dataset.shuffle(1000)
         dataset = dataset.shard(hvd.size(), hvd.rank())
+        dataset = dataset.shuffle(500)
         dataset = dataset.interleave(self._generator, cycle_length=16, num_parallel_calls=16)
         dataset = dataset.unbatch()
         dataset = dataset.shuffle(batch_size * 3)
         dataset = dataset.prefetch(batch_size * 3)
         dataset = dataset.batch(batch_size)
-        dataset = dataset.repeat()
-        return dataset
+        return dataset.repeat()
 
     def test_fn(self, batch_size=8):
         dataset = tf.data.Dataset.from_tensor_slices(self._test_images)
@@ -136,7 +137,7 @@ class SLSTRDataLoader(DataLoader):
         dataset = dataset.unbatch()
         dataset = dataset.batch(batch_size)
         dataset = dataset.prefetch(batch_size)
-        return dataset
+        return dataset.repeat()
 
 class Sentinel3Dataset(DataLoader):
     """Load, separate and prepare the data for training and prediction"""

@@ -172,7 +172,6 @@ class MultiNodeBenchmark:
         LOGGER.log('Training for {} epochs'.format(epochs))
         LOGGER.log('Epoch contains {} steps'.format(spe))
 
-
         dataset = self._dataset.train_fn(params['batch_size'])
 
         LOGGER.log(tags.RUN_START)
