@@ -87,7 +87,7 @@ Some examples of the syntax for configuration files can be found in the
 First pull the image from singularity hub
 
 ```bash
-singularity pull library://sljack/default/sciml-bench-tf
+singularity pull library://sljack/sciml/sciml-bench-tf
 ```
 
 Then run all the benchmarks with the following command:
