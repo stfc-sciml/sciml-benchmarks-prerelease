@@ -1,5 +1,6 @@
 import tensorflow as tf
 import mlflow
+from mpi4py import MPI
 from threading import Timer
 from abc import abstractmethod, ABCMeta
 from sciml_bench.core.system import DeviceSpecs, HostSpec, bytesto
@@ -9,7 +10,6 @@ class DistributedMLFlowRun:
 
     def __init__(self):
         try:
-            from mpi4py import MPI
             self._comm = MPI.COMM_WORLD
             self._rank = self._comm.Get_rank()
         except ImportError:

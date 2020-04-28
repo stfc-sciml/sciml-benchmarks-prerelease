@@ -149,18 +149,19 @@ class MultiNodeBenchmark:
         hooks = [
             hvd.callbacks.BroadcastGlobalVariablesCallback(0),
             hvd.callbacks.MetricAverageCallback(),
-            hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=lr_warmup, verbose=1),
+            hvd.callbacks.LearningRateWarmupCallback(steps_per_epoch=spe, warmup_epochs=lr_warmup, verbose=1),
         ]
 
-        # Add hook for capturing Img/s and duration
-        train_profiler_hook = ProfilingHook(params['batch_size'],
-                                            spe, num_replicas=params['num_replicas'])
-        hooks.append(train_profiler_hook)
-
         if hvd.rank() == 0:
-            # single node options. Only need to add these once across all processes
+            # These hooks only need to be called by one instance.
+            # Therefore we need to only add them on rank == 0
             mlf_callback = MLFlowCallback(self._log_batch)
             hooks.append(mlf_callback)
+
+            # Add hook for capturing Img/s and duration
+            train_profiler_hook = ProfilingHook(params['batch_size'],
+                                                spe, num_replicas=params['num_replicas'])
+            hooks.append(train_profiler_hook)
 
         # Add hook for capturing metrics vs. epoch
         log_file = Path(params['model_dir']).joinpath('training.log')
@@ -170,7 +171,6 @@ class MultiNodeBenchmark:
         LOGGER.log('Begin Training...')
         LOGGER.log('Training for {} epochs'.format(epochs))
         LOGGER.log('Epoch contains {} steps'.format(spe))
-
 
         dataset = self._dataset.train_fn(params['batch_size'])
 
@@ -184,30 +184,33 @@ class MultiNodeBenchmark:
 
         LOGGER.log(tags.RUN_STOP)
 
-        self._results['train'] = train_profiler_hook.get_results()
+        if hvd.rank() == 0:
+            self._results['train'] = train_profiler_hook.get_results()
 
     def predict(self, lr_warmup=3, **params):
         if self._model is None:
             raise RuntimeError("Model has not been built!\n \
                     Please call benchmark.build() first to compile the model!")
 
-        test_profiler_hook = ProfilingHook(params['batch_size'],
-                                           warmup_steps=5, num_replicas=params['num_replicas'])
+        predict_steps = int(np.ceil(self._dataset.test_size / params['global_batch_size']))
 
         # Add hooks for Horovod
         hooks = [
             hvd.callbacks.BroadcastGlobalVariablesCallback(0),
             hvd.callbacks.MetricAverageCallback(),
-            hvd.callbacks.LearningRateWarmupCallback(warmup_epochs=lr_warmup, verbose=1),
+            hvd.callbacks.LearningRateWarmupCallback(steps_per_epoch=predict_steps, warmup_epochs=lr_warmup, verbose=1),
         ]
 
-        hooks.append(test_profiler_hook)
-
         if hvd.rank() == 0:
+            # These hooks only need to be called by one instance.
+            # Therefore we need to only add them on rank == 0
             mlf_callback = MLFlowCallback(self._log_batch)
             hooks.append(mlf_callback)
 
-        predict_steps = int(np.ceil(self._dataset.test_size / params['global_batch_size']))
+            test_profiler_hook = ProfilingHook(params['batch_size'],
+                                               warmup_steps=5, num_replicas=params['num_replicas'])
+            hooks.append(test_profiler_hook)
+
 
         LOGGER.log('Begin Predict...')
         LOGGER.log('Predicting for {} steps'.format(predict_steps))
@@ -224,8 +227,9 @@ class MultiNodeBenchmark:
         LOGGER.log(tags.RUN_STOP)
         LOGGER.log("Predict finished")
 
-        self._results['test'] = test_profiler_hook.get_results()
-        self._results['test'].update(metrics)
+        if hvd.rank() == 0:
+            self._results['test'] = test_profiler_hook.get_results()
+            self._results['test'].update(metrics)
 
     def save_results(self, **params):
         if hvd.rank() == 0:

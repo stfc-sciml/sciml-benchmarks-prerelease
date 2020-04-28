@@ -127,19 +127,20 @@ class MultiNodeBenchmarkRunner:
         return params
 
     def run(self, log_interval=0.5, **params):
-        host_logger = MLFlowHostLogger(name=self._node_name, interval=log_interval)
-        device_logger = MLFlowDeviceLogger(name=self._node_name, interval=log_interval)
 
-        host_logger.start()
-        device_logger.start()
+        if hvd.local_rank() == 0:
+            host_logger = MLFlowHostLogger(name=self._node_name, interval=log_interval)
+            device_logger = MLFlowDeviceLogger(name=self._node_name, interval=log_interval)
+
+            host_logger.start()
+            device_logger.start()
 
         params = self.setup(**params)
-
-        mlflow.log_params(params)
-
         self._benchmark.build(**params)
 
         if hvd.rank() == 0:
+            mlflow.log_params(params)
+
             LOGGER.log('MPI Enabled: ', hvd.mpi_enabled())
             LOGGER.log('Number of Replicas: {}'.format(params['num_replicas']))
             LOGGER.log('Global Batch Size: {}'.format(params['global_batch_size']))
@@ -153,8 +154,9 @@ class MultiNodeBenchmarkRunner:
 
         self._benchmark.save_results(**params)
 
-        host_logger.stop()
-        device_logger.stop()
+        if hvd.local_rank() == 0:
+            host_logger.stop()
+            device_logger.stop()
 
         if hvd.rank() == 0:
             mlflow.log_artifact(Path(params['model_dir']) / 'final_weights.h5')
