@@ -81,6 +81,9 @@ class RepeatedTimer:
     def start(self):
         if not self.is_running:
             self._timer = Timer(self.interval, self._run)
+            # Important! Must be registered as daemon to properly exit
+            # if killed by external process
+            self._timer.daemon = True
             self._timer.start()
             self.is_running = True
 
