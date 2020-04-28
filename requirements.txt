@@ -15,4 +15,4 @@ mlflow
 psutil
 py-cpuinfo
 pytest-mock
-horovod
+mpi4py
