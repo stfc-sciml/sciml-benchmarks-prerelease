@@ -76,7 +76,7 @@ The parameters for a benchmark can also be passed with a configuration YAML file
 using the `--config` option. For example:
 
 ```
-sciml-bench em_denoise --config config.yml
+sciml-bench em-denoise --config config.yml
 ```
 
 Some examples of the syntax for configuration files can be found in the 
@@ -105,7 +105,7 @@ singularity run --nv sciml-bench-tf.sif <benchmark-name>
 For example to run the Electron Microscopy denoise benchmark:
 
 ```bash
-singularity run --nv sciml-bench-tf.sif em_denoise
+singularity run --nv sciml-bench-tf.sif em-denoise
 ```
 
 ### Using the Docker container
