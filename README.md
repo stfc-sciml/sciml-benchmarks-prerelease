@@ -58,7 +58,7 @@ To run a specific benchmark use the following:
 sciml-bench <benchmark-name>
 ```
 
-For example, to run the the `em_denoise` benchmark the syntax would be:
+For example, to run the the `em-denoise` benchmark the syntax would be:
 
 ```
 sciml-bench em_denoise
