@@ -61,7 +61,7 @@ sciml-bench <benchmark-name>
 For example, to run the the `em-denoise` benchmark the syntax would be:
 
 ```
-sciml-bench em_denoise
+sciml-bench em-denoise
 ```
 
 Additionally, each benchmark takes a list of arguments such as the `batch_size`,
