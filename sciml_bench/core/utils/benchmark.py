@@ -4,7 +4,7 @@ import tensorflow as tf
 from pathlib import Path
 import horovod.tensorflow.keras as hvd
 from sciml_bench.core.dllogger import tags, LOGGER
-from sciml_bench.core.utils.hooks.mlflow import MLFlowCallback
+from sciml_bench.core.utils.hooks.mlflow import MLFlowCallback, MLFlowTimingCallback
 from sciml_bench.core.utils.hooks.profiling_hook import ProfilingHook
 
 class Benchmark:
@@ -159,9 +159,8 @@ class MultiNodeBenchmark:
             hooks.append(mlf_callback)
 
             # Add hook for capturing Img/s and duration
-            train_profiler_hook = ProfilingHook(params['batch_size'],
-                                                spe, num_replicas=params['num_replicas'])
-            hooks.append(train_profiler_hook)
+            profiler_hook = MLFlowTimingCallback(params['global_batch_size'])
+            hooks.append(profiler_hook)
 
         # Add hook for capturing metrics vs. epoch
         log_file = Path(params['model_dir']).joinpath('training.log')
@@ -185,7 +184,7 @@ class MultiNodeBenchmark:
         LOGGER.log(tags.RUN_STOP)
 
         if hvd.rank() == 0:
-            self._results['train'] = train_profiler_hook.get_results()
+            self._results['train'] = profiler_hook.get_results()
 
     def predict(self, lr_warmup=3, **params):
         if self._model is None:
@@ -207,10 +206,8 @@ class MultiNodeBenchmark:
             mlf_callback = MLFlowCallback(self._log_batch)
             hooks.append(mlf_callback)
 
-            test_profiler_hook = ProfilingHook(params['batch_size'],
-                                               warmup_steps=5, num_replicas=params['num_replicas'])
-            hooks.append(test_profiler_hook)
-
+            profiler_hook = MLFlowTimingCallback(params['global_batch_size'])
+            hooks.append(profiler_hook)
 
         LOGGER.log('Begin Predict...')
         LOGGER.log('Predicting for {} steps'.format(predict_steps))
@@ -228,7 +225,7 @@ class MultiNodeBenchmark:
         LOGGER.log("Predict finished")
 
         if hvd.rank() == 0:
-            self._results['test'] = test_profiler_hook.get_results()
+            self._results['test'] = profiler_hook.get_results()
             self._results['test'].update(metrics)
 
     def save_results(self, **params):
