@@ -144,3 +144,4 @@ mlruns
 art
 server
 sciml-bench-out
+jobs/*

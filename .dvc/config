@@ -1,4 +1,0 @@
-[core]
-    remote = dvc-store
-['remote "dvc-store"']
-    url = ssh://scarf688@scarf.rl.ac.uk:/work3/projects/sciml/data/dvc-store
