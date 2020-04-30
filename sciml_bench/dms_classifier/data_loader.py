@@ -47,7 +47,7 @@ class DMSDataset(DataLoader):
                                                  args=(path, ))
         dataset = dataset.shard(hvd.size(), hvd.rank())
         dataset = dataset.map(lambda x, y: (x[:, :, :1], y))
-        dataset = dataset.shuffle(1000)
+        dataset = dataset.shuffle(500)
         dataset = dataset.batch(batch_size)
         dataset = dataset.repeat()
         return dataset
