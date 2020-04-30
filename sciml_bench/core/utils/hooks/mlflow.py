@@ -1,8 +1,11 @@
+import time
 import tensorflow as tf
 import mlflow
 from mpi4py import MPI
 from threading import Timer
 from abc import abstractmethod, ABCMeta
+
+from sciml_bench.core.dllogger import AverageMeter
 from sciml_bench.core.system import DeviceSpecs, HostSpec, bytesto
 
 
@@ -36,6 +39,79 @@ class DistributedMLFlowRun:
     def __exit__(self, *args):
         """Helper function to end a mlflow run even during MPI runs"""
         mlflow.end_run()
+
+class MLFlowTimingCallback(tf.keras.callbacks.Callback):
+
+    def __init__(self, batch_size, warmup_steps=1):
+        self._current_step = 0
+        self._warmup_steps = warmup_steps
+        self._batch_size = batch_size
+
+        self._train_meter = AverageMeter()
+        self._predict_meter = AverageMeter()
+        self._test_meter = AverageMeter()
+
+    def on_train_batch_begin(self, batch, logs=None):
+        self._t0 = time.time()
+
+    def on_train_batch_end(self, batch, logs=None):
+        if self._current_step < self._warmup_steps:
+            return
+
+        t1 = time.time()
+        batch_time = (t1 - self._t0) / self._batch_size
+
+        self._train_meter.record(batch_time)
+
+    def on_predict_batch_begin(self, batch, logs=None):
+        self._t0 = time.time()
+
+    def on_predict_batch_end(self, batch, logs=None):
+        t1 = time.time()
+        batch_time = (t1 - self._t0) / self._batch_size
+
+        self._predict_meter.record(batch_time)
+
+    def on_test_batch_begin(self, batch, logs=None):
+        self._t0 = time.time()
+
+    def on_test_batch_end(self, batch, logs=None):
+        t1 = time.time()
+        batch_time = (t1 - self._t0) / self._batch_size
+
+        self._test_meter.record(batch_time)
+
+    def on_epoch_begin(self, epoch, logs=None):
+        self._epoch_begin_time = time.time()
+
+    def on_epoch_end(self, epoch, logs=None):
+        self._current_step = epoch
+        if epoch < self._warmup_steps:
+            return
+
+        mlflow.log_metric('epoch_duration', epoch, time.time() - self._epoch_begin_time)
+        mlflow.log_metric('train_samples_per_sec', epoch, self._train_meter.get_value())
+
+    def on_train_begin(self, logs=None):
+        self._train_begin_time = time.time()
+
+    def on_train_end(self, logs=None):
+        mlflow.log_metric('train_duration', time.time() - self._train_begin_time)
+
+    def on_test_begin(self,logs=None):
+        self._test_begin_time = time.time()
+
+    def on_test_end(self,logs=None):
+        mlflow.log_metric('val_duration', time.time() - self._test_begin_time)
+        mlflow.log_metric('val_samples_per_sec', self._test_meter.get_value())
+
+    def on_predict_begin(self, logs=None):
+        self._predict_begin_time = time.time()
+
+    def on_predict_end(self, logs=None):
+        mlflow.log_metric('test_duration', time.time() - self._predict_begin_time)
+        mlflow.log_metric('test_samples_per_sec', self._predict_meter.get_value())
+
 
 class MLFlowCallback(tf.keras.callbacks.Callback):
 
