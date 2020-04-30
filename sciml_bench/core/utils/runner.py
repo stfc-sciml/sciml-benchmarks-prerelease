@@ -152,8 +152,6 @@ class MultiNodeBenchmarkRunner:
         if 'predict' in params['exec_mode']:
             self._benchmark.predict(**params)
 
-        self._benchmark.save_results(**params)
-
         if hvd.local_rank() == 0:
             host_logger.stop()
             device_logger.stop()

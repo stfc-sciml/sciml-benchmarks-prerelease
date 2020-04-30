@@ -183,9 +183,6 @@ class MultiNodeBenchmark:
 
         LOGGER.log(tags.RUN_STOP)
 
-        if hvd.rank() == 0:
-            self._results['train'] = profiler_hook.get_results()
-
     def predict(self, lr_warmup=3, **params):
         if self._model is None:
             raise RuntimeError("Model has not been built!\n \
@@ -223,22 +220,3 @@ class MultiNodeBenchmark:
 
         LOGGER.log(tags.RUN_STOP)
         LOGGER.log("Predict finished")
-
-        if hvd.rank() == 0:
-            self._results['test'] = profiler_hook.get_results()
-            self._results['test'].update(metrics)
-
-    def save_results(self, **params):
-        if hvd.rank() == 0:
-            model_dir = params['model_dir']
-            results_file = Path(model_dir).joinpath('results.yml')
-
-            with results_file.open('w') as handle:
-                yaml.dump(self._results, handle)
-
-            params_file = Path(model_dir).joinpath('params.yml')
-            with params_file.open('w') as handle:
-                yaml.dump(params, handle)
-
-            weights_file = str(Path(model_dir).joinpath('final_weights.h5'))
-            self._model.save_weights(weights_file)
