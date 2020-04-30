@@ -1,9 +1,11 @@
 import pytest
+import horovod.tensorflow as hvd
 from sciml_bench.core.test.helpers import FakeDataLoader, fake_model_fn
 from sciml_bench.core.utils.benchmark import Benchmark, MultiNodeBenchmark
 
 @pytest.fixture()
 def mocked_mlflow(mocker):
+    hvd.init()
     mocker.patch('mlflow.set_tag')
     mocker.patch('mlflow.set_tags')
     mocker.patch('mlflow.log_artifacts')
@@ -34,6 +36,7 @@ def test_train_benchmark(tmpdir, mocked_mlflow):
     benchmark.build(**cfg)
     benchmark.train(**cfg)
 
+
 def test_predict_benchmark(tmpdir, mocked_mlflow):
     data_loader = FakeDataLoader((10, 10, 3), (1, ))
 
@@ -51,21 +54,23 @@ def test_build_multi_node_benchmark(tmpdir, mocked_mlflow):
     data_loader = FakeDataLoader((10, 10, 3), (1, ))
 
     cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir)
-    benchmark = Benchmark(fake_model_fn, data_loader)
+    benchmark = MultiNodeBenchmark(fake_model_fn, data_loader)
     benchmark.build(**cfg)
 
 def test_train_multi_node_benchmark(tmpdir, mocked_mlflow):
     data_loader = FakeDataLoader((10, 10, 3), (1, ))
 
     cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir, global_batch_size=10, num_replicas=1, epochs=1)
-    benchmark = Benchmark(fake_model_fn, data_loader)
+    benchmark = MultiNodeBenchmark(fake_model_fn, data_loader)
     benchmark.build(**cfg)
     benchmark.train(**cfg)
+
+    assert (tmpdir / 'final_weights.h5').exists()
 
 def test_predict_multi_node_benchmark(tmpdir, mocked_mlflow):
     data_loader = FakeDataLoader((10, 10, 3), (1, ))
 
     cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir, global_batch_size=10, num_replicas=1, epochs=1)
-    benchmark = Benchmark(fake_model_fn, data_loader)
+    benchmark = MultiNodeBenchmark(fake_model_fn, data_loader)
     benchmark.build(**cfg)
     benchmark.predict(**cfg)

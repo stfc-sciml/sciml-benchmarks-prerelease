@@ -1,6 +1,7 @@
 import yaml
 import numpy as np
 import tensorflow as tf
+import mlflow
 from pathlib import Path
 import horovod.tensorflow.keras as hvd
 from sciml_bench.core.dllogger import tags, LOGGER
@@ -182,6 +183,13 @@ class MultiNodeBenchmark:
                 verbose=verbose)
 
         LOGGER.log(tags.RUN_STOP)
+
+        if hvd.rank() == 0:
+            model_dir = Path(params['model_dir'])
+            model_dir.mkdir(parents=True, exist_ok=True)
+            weights_file = str(model_dir / 'final_weights.h5')
+            self._model.save_weights(weights_file)
+            mlflow.log_artifact(weights_file)
 
     def predict(self, lr_warmup=3, **params):
         if self._model is None:

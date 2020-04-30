@@ -156,11 +156,6 @@ class MultiNodeBenchmarkRunner:
             host_logger.stop()
             device_logger.stop()
 
-        if hvd.rank() == 0:
-            mlflow.log_artifact(Path(params['model_dir']) / 'final_weights.h5')
-            mlflow.log_artifact(Path(params['model_dir']) / 'params.yml')
-
-
 def build_benchmark(model_fn, dataset, using_mpi=True):
     if not using_mpi:
         benchmark = Benchmark(model_fn, dataset)

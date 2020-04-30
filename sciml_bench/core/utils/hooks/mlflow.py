@@ -59,7 +59,7 @@ class MLFlowTimingCallback(tf.keras.callbacks.Callback):
             return
 
         t1 = time.time()
-        batch_time = (t1 - self._t0) / self._batch_size
+        batch_time = self._batch_size / (t1 - self._t0)
 
         self._train_meter.record(batch_time)
 
@@ -68,7 +68,7 @@ class MLFlowTimingCallback(tf.keras.callbacks.Callback):
 
     def on_predict_batch_end(self, batch, logs=None):
         t1 = time.time()
-        batch_time = (t1 - self._t0) / self._batch_size
+        batch_time = self._batch_size / (t1 - self._t0)
 
         self._predict_meter.record(batch_time)
 
@@ -77,7 +77,7 @@ class MLFlowTimingCallback(tf.keras.callbacks.Callback):
 
     def on_test_batch_end(self, batch, logs=None):
         t1 = time.time()
-        batch_time = (t1 - self._t0) / self._batch_size
+        batch_time = self._batch_size / (t1 - self._t0)
 
         self._test_meter.record(batch_time)
 
@@ -89,8 +89,8 @@ class MLFlowTimingCallback(tf.keras.callbacks.Callback):
         if epoch < self._warmup_steps:
             return
 
-        mlflow.log_metric('epoch_duration', epoch, time.time() - self._epoch_begin_time)
-        mlflow.log_metric('train_samples_per_sec', epoch, self._train_meter.get_value())
+        mlflow.log_metric('epoch_duration', time.time() - self._epoch_begin_time, step=epoch)
+        mlflow.log_metric('train_samples_per_sec', self._train_meter.get_value(), step=epoch)
 
     def on_train_begin(self, logs=None):
         self._train_begin_time = time.time()
