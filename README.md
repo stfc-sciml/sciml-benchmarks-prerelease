@@ -52,13 +52,20 @@ Once installed, to run all benchmarks with default configurations, run:
 sciml-bench
 ```
 
+You can check what benchmarks exist and if the data for the benchmark is
+downloaded by running:
+
+```
+sciml-bench list
+```
+
 To run a specific benchmark use the following:
 
 ```
 sciml-bench <benchmark-name>
 ```
 
-For example, to run the the `em-denoise` benchmark the syntax would be:
+For example, to run the `em-denoise` benchmark the syntax would be:
 
 ```
 sciml-bench em-denoise
@@ -96,16 +103,16 @@ Then run all the benchmarks with the following command:
 singularity run --nv sciml-bench-tf.sif
 ```
 
-Run induvidual benchmarks using: 
+Run individual benchmarks using: 
 
 ```bash
-singularity run --nv sciml-bench-tf.sif sciml-bench <benchmark-name>
+singularity run --nv sciml-bench-tf.sif <benchmark-name>
 ```
 
 For example to run the Electron Microscopy denoise benchmark:
 
 ```bash
-singularity run --nv sciml-bench-tf.sif sciml-bench em-denoise
+singularity run --nv sciml-bench-tf.sif em-denoise
 ```
 
 ### Using the Docker container
