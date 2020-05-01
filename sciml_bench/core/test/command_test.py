@@ -7,6 +7,7 @@ from sciml_bench.core.command import cli
 def data_dir():
     return Path("data/").absolute()
 
+@pytest.mark.skip
 def test_command_em_denoise(data_dir, tmpdir):
     runner = CliRunner()
     with runner.isolated_filesystem():

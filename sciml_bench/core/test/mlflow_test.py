@@ -1,7 +1,8 @@
 import time
+import horovod.tensorflow as hvd
 from itertools import chain
 from sciml_bench.core.test.helpers import fake_model_fn, FakeDataLoader
-from sciml_bench.core.utils.hooks.mlflow import MLFlowDeviceLogger, MLFlowHostLogger, MLFlowCallback, log_device_stats, log_host_stats, MLFlowTimingCallback
+from sciml_bench.core.utils.hooks.mlflow import MLFlowDeviceLogger, MLFlowHostLogger, MLFlowCallback, log_device_stats, log_host_stats, MLFlowTimingCallback, NodeLogger
 
 def test_MLFlowDeviceLogger(mocker):
 
@@ -26,6 +27,20 @@ def test_MLFlowHostLogger(mocker):
     logger.stop()
 
     run_stub.assert_called()
+
+def test_NodeLogger(mocker):
+    hvd.init()
+    logger = NodeLogger('pytest', interval=0.1)
+
+    host_stub = mocker.spy(logger._host_logger, 'run')
+    device_stub = mocker.spy(logger._device_logger, 'run')
+
+    with logger:
+        time.sleep(1)
+
+    host_stub.assert_called()
+    device_stub.assert_called()
+
 
 def test_log_device_stats(mocker):
 

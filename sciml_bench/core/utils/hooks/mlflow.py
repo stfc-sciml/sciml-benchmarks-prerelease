@@ -4,6 +4,7 @@ import mlflow
 from mpi4py import MPI
 from threading import Timer
 from abc import abstractmethod, ABCMeta
+import horovod.tensorflow as hvd
 
 from sciml_bench.core.dllogger import AverageMeter
 from sciml_bench.core.system import DeviceSpecs, HostSpec, bytesto
@@ -263,3 +264,27 @@ class MLFlowLoggerProxy():
             renamed_tags[self._prefix + key] = value
         mlflow.set_tags(renamed_tags)
 
+class NodeLogger:
+
+    _host_logger = None
+    _device_logger = None
+
+    def __init__(self, name, interval):
+        if hvd.local_rank() == 0:
+            self._host_logger = MLFlowHostLogger(name=name, interval=interval)
+            self._device_logger = MLFlowDeviceLogger(name=name, interval=interval)
+
+    def has_loggers(self):
+        return self._host_logger is not None and self._device_logger is not None
+
+    def __enter__(self):
+        if self.has_loggers():
+            self._host_logger.start()
+            self._device_logger.start()
+
+        return self
+
+    def __exit__(self ,type, value, traceback):
+        if self.has_loggers():
+            self._host_logger.stop()
+            self._device_logger.stop()

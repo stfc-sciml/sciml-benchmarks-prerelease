@@ -5,9 +5,8 @@ import horovod.tensorflow.keras as hvd
 
 from sciml_bench.core.dllogger.logger import LOGGER
 from sciml_bench.core.system import HostSpec, DeviceSpecs
-from sciml_bench.core.utils.hooks.mlflow import MLFlowDeviceLogger, MLFlowHostLogger, MLFlowLoggerProxy
+from sciml_bench.core.utils.hooks.mlflow import NodeLogger, MLFlowLoggerProxy
 from sciml_bench.core.utils.benchmark import MultiNodeBenchmark
-
 
 class MultiNodeBenchmarkRunner:
 
@@ -62,13 +61,6 @@ class MultiNodeBenchmarkRunner:
 
     def run(self, log_interval=0.5, **params):
 
-        if hvd.local_rank() == 0:
-            host_logger = MLFlowHostLogger(name=self._node_name, interval=log_interval)
-            device_logger = MLFlowDeviceLogger(name=self._node_name, interval=log_interval)
-
-            host_logger.start()
-            device_logger.start()
-
         params = self.setup(**params)
         self._benchmark.build(**params)
 
@@ -81,14 +73,14 @@ class MultiNodeBenchmarkRunner:
             LOGGER.log('Replica Batch Size: {}'.format(params['batch_size']))
 
         if 'train' in params['exec_mode']:
-            self._benchmark.train(**params)
+            name = '_'.join(['train', self._node_name])
+            with NodeLogger(name=name, interval=log_interval):
+                self._benchmark.train(**params)
 
         if 'predict' in params['exec_mode']:
-            self._benchmark.predict(**params)
-
-        if hvd.local_rank() == 0:
-            host_logger.stop()
-            device_logger.stop()
+            name = '_'.join(['predict', self._node_name])
+            with NodeLogger(name=name, interval=log_interval):
+                self._benchmark.predict(**params)
 
 def build_benchmark(model_fn, dataset, using_mpi=True):
     benchmark = MultiNodeBenchmark(model_fn, dataset)
