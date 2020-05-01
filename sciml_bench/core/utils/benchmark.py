@@ -3,7 +3,8 @@ import tensorflow as tf
 import mlflow
 from pathlib import Path
 import horovod.tensorflow.keras as hvd
-from sciml_bench.core.dllogger import tags, LOGGER
+from sciml_bench.core.logging import LOGGER
+from sciml_bench.core.dllogger import tags
 from sciml_bench.core.utils.hooks.mlflow import MLFlowCallback, MLFlowTimingCallback
 
 
@@ -62,13 +63,13 @@ class MultiNodeBenchmark:
         csv_logger = tf.keras.callbacks.CSVLogger(log_file)
         hooks.append(csv_logger)
 
-        LOGGER.log('Begin Training...')
-        LOGGER.log('Training for {} epochs'.format(epochs))
-        LOGGER.log('Epoch contains {} steps'.format(spe))
+        LOGGER.info('Begin Training...')
+        LOGGER.info('Training for {} epochs'.format(epochs))
+        LOGGER.info('Epoch contains {} steps'.format(spe))
 
         dataset = self._dataset.train_fn(params['batch_size'])
 
-        LOGGER.log(tags.RUN_START)
+        LOGGER.debug('Fitting Start')
 
         self._model.fit(dataset,
                 epochs=epochs,
@@ -76,7 +77,7 @@ class MultiNodeBenchmark:
                 callbacks=hooks,
                 verbose=verbose)
 
-        LOGGER.log(tags.RUN_STOP)
+        LOGGER.debug('Fitting End')
 
         if hvd.rank() == 0:
             model_dir = Path(params['model_dir'])
@@ -108,17 +109,12 @@ class MultiNodeBenchmark:
             profiler_hook = MLFlowTimingCallback(params['global_batch_size'])
             hooks.append(profiler_hook)
 
-        LOGGER.log('Begin Predict...')
-        LOGGER.log('Predicting for {} steps'.format(predict_steps))
-        LOGGER.log(tags.RUN_START)
+        LOGGER.info('Begin Predict...')
+        LOGGER.info('Predicting for {} steps'.format(predict_steps))
 
         dataset = self._dataset.test_fn(params['batch_size'])
         verbose = 1 if hvd.rank() == 0 else 0
-        metrics = self._model.evaluate(dataset, steps=predict_steps, callbacks=hooks, verbose=verbose)
 
-        # Handle special case: only metric is the loss
-        metrics = metrics if isinstance(metrics, list) else [metrics]
-        metrics = {name: float(value) for name, value in zip(self._model.metrics_names, metrics)}
-
-        LOGGER.log(tags.RUN_STOP)
-        LOGGER.log("Predict finished")
+        LOGGER.debug('Evaluate Start')
+        self._model.evaluate(dataset, steps=predict_steps, callbacks=hooks, verbose=verbose)
+        LOGGER.debug('Evaluate End')

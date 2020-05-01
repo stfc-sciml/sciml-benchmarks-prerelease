@@ -15,7 +15,8 @@
 import time
 import mlflow
 import tensorflow as tf
-from sciml_bench.core.dllogger import LOGGER, AverageMeter
+from sciml_bench.core.logging import LOGGER
+from sciml_bench.core.dllogger import AverageMeter
 
 
 class ProfilingHook(tf.keras.callbacks.Callback):

@@ -1,9 +1,8 @@
 import os
 
+
 # Optimization flags
 os.environ['CUDA_CACHE_DISABLE'] = '0'
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 
 os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
 
@@ -16,16 +15,22 @@ os.environ['TF_ENABLE_WINOGRAD_NONFUSED'] = 'data'
 os.environ['TF_SYNC_ON_FINISH'] = '0'
 os.environ['TF_AUTOTUNE_THRESHOLD'] = '2'
 
+import logging
+import warnings
 import sys
 import yaml
 import click
 import click_config_file
 import mlflow
 from pathlib import Path
-import horovod.tensorflow as hvd
 
+with warnings.catch_warnings():
+    warnings.filterwarnings('ignore', category=DeprecationWarning)
+    import horovod.tensorflow as hvd
+
+import sciml_bench
 from sciml_bench.core.utils.hooks.mlflow import DistributedMLFlowRun
-from sciml_bench.core.dllogger.logger import LOGGER
+from sciml_bench.core.logging import LOGGER
 from sciml_bench.core.download import download_datasets
 
 def yaml_provider(file_path, cmd_name):
@@ -50,12 +55,27 @@ def print_header():
         sys.stdout.write(text)
         sys.stdout.write("\n\n")
 
+    LOGGER.info('Version: %s', sciml_bench.__version__)
+
+    from mpi4py import MPI
+    data = (MPI.Get_processor_name(), hvd.local_size())
+    _comm = MPI.COMM_WORLD
+    data = _comm.bcast(data, root=0)
+
+    data = [data] if not isinstance(data, list) else data
+    for node_name, local_size in data:
+        LOGGER.info('%s has %s processes', node_name, local_size)
+
 def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
     if cpu_only:
         os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
     if use_amp:
         os.environ['TF_ENABLE_AUTO_MIXED_PRECISION'] = '1'
+
+    LOGGER.setLevel(kwargs['log_level'])
+    if kwargs['log_level'] < logging.INFO:
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '-1'
 
 
 @click.group()
@@ -68,14 +88,17 @@ def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
 @click.option('--log-batch', default=False, is_flag=True, help='Whether to log metrics by batch or by epoch')
 @click.option('--log-interval', default=0.5, help='Logging interval for system metrics')
 @click.option('--seed', default=42, type=int, help='Random seed to use for initialization of random state')
+@click.option('--log-level', default=logging.INFO, type=int, help='Log level to use for printing to stdout')
 def cli(ctx, tracking_uri=None, **kwargs):
-    hvd.init()
-    ctx.ensure_object(dict)
-    ctx.obj.update(kwargs)
+    warnings.filterwarnings('ignore', category=DeprecationWarning)
+    with warnings.catch_warnings():
+        hvd.init()
+        ctx.ensure_object(dict)
+        ctx.obj.update(kwargs)
 
-    mlflow.set_tracking_uri(tracking_uri)
-    print_header()
-    set_environment_variables(**kwargs)
+        mlflow.set_tracking_uri(tracking_uri)
+        print_header()
+        set_environment_variables(**kwargs)
 
 
 @cli.command(help='Run all benchmarks with default settings')

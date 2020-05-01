@@ -3,7 +3,7 @@ import mlflow
 from pathlib import Path
 import horovod.tensorflow.keras as hvd
 
-from sciml_bench.core.dllogger.logger import LOGGER
+from sciml_bench.core.logging import LOGGER
 from sciml_bench.core.system import HostSpec, DeviceSpecs
 from sciml_bench.core.utils.hooks.mlflow import NodeLogger, MLFlowLoggerProxy
 from sciml_bench.core.utils.benchmark import MultiNodeBenchmark
@@ -67,10 +67,9 @@ class MultiNodeBenchmarkRunner:
         if hvd.rank() == 0:
             mlflow.log_params(params)
 
-            LOGGER.log('MPI Enabled: ', hvd.mpi_enabled())
-            LOGGER.log('Number of Replicas: {}'.format(params['num_replicas']))
-            LOGGER.log('Global Batch Size: {}'.format(params['global_batch_size']))
-            LOGGER.log('Replica Batch Size: {}'.format(params['batch_size']))
+        LOGGER.info('Number of Replicas: {}'.format(params['num_replicas']))
+        LOGGER.info('Global Batch Size: {}'.format(params['global_batch_size']))
+        LOGGER.info('Replica Batch Size: {}'.format(params['batch_size']))
 
         if 'train' in params['exec_mode']:
             name = '_'.join(['train', self._node_name])
