@@ -18,20 +18,7 @@ def mocked_mlflow(mocker):
     mocker.patch('mlflow.log_metrics')
     return mocker
 
-# def test_create_benchmark_runner(mocked_mlflow):
-#     data_loader = FakeDataLoader((10, 10, 3), (1, ))
-#     benchmark = Benchmark(fake_model_fn, data_loader)
-#     runner = BenchmarkRunner(benchmark)
-#     assert isinstance(runner, BenchmarkRunner)
-
-# def test_run_benchmark_runner(tmpdir, mocked_mlflow):
-#     data_loader = FakeDataLoader((10, 10, 3), (1, ))
-#     benchmark = Benchmark(fake_model_fn, data_loader)
-
-#     cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir,
-#             exec_mode='train_and_predict', epochs=1)
-#     BenchmarkRunner(benchmark).run(**cfg)
-
+@pytest.mark.forked
 def test_run_benchmark_runner_multi(tmpdir, mocked_mlflow):
     tf.keras.backend.clear_session()
     data_loader = FakeDataLoader((10, 10, 3), (1, ))

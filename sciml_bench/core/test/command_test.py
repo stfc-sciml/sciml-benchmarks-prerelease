@@ -12,5 +12,5 @@ def test_command_em_denoise(data_dir, tmpdir):
     with runner.isolated_filesystem():
         model_dir = str(tmpdir)
         data_dir = str(Path(data_dir / 'em_denoise'))
-        result = runner.invoke(cli, ['em-denoise', '--data-dir',  data_dir, '--model-dir', model_dir, '--epochs', '1'])
+        result = runner.invoke(cli, ['em-denoise', '--data-dir',  data_dir, '--model-dir', model_dir, '--epochs', '1', '--batch-size', '1'])
         assert result.exit_code == 0
