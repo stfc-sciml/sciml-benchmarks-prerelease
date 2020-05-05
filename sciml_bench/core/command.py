@@ -21,7 +21,6 @@ import sys
 import yaml
 import click
 import click_config_file
-import mlflow
 from pathlib import Path
 
 with warnings.catch_warnings():
@@ -29,7 +28,6 @@ with warnings.catch_warnings():
     import horovod.tensorflow as hvd
 
 import sciml_bench
-from sciml_bench.core.utils.hooks.mlflow import DistributedMLFlowRun
 from sciml_bench.core.logging import LOGGER
 from sciml_bench.core.download import download_datasets
 
@@ -82,7 +80,6 @@ def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
 @click.pass_context
 @click.option('--data-dir', default='data', help='Data directory location', envvar='SCIML_BENCH_DATA_DIR')
 @click.option('--model-dir', default='sciml-bench-out', type=str, help='Output directory for model results', envvar='SCIML_BENCH_MODEL_DIR')
-@click.option('--tracking-uri', default=None, type=str, help='Tracking URI for MLFlow', envvar='SCIML_BENCH_TRACKING_URI')
 @click.option('--lr-warmup', default=3, type=int, help='Number of epochs over which to scale the learning rate.')
 @click.option('--cpu-only', default=False, is_flag=True, help='Disable GPU execution')
 @click.option('--use-amp', default=False, is_flag=True, help='Enable Automatic Mixed Precision')
@@ -98,7 +95,6 @@ def cli(ctx, tracking_uri=None, **kwargs):
         ctx.ensure_object(dict)
         ctx.obj.update(kwargs)
 
-        mlflow.set_tracking_uri(tracking_uri)
         print_header()
         set_environment_variables(**kwargs)
 
@@ -174,14 +170,12 @@ def download(*args, **kwargs):
 
 def _run_benchmark(module, ctx, **kwargs):
     benchmark_name = ctx.command.name.replace('-', '_')
-    mlflow.set_experiment(benchmark_name)
 
-    with DistributedMLFlowRun():
-        kwargs.update(ctx.obj)
-        kwargs['data_dir'] = str(Path(kwargs['data_dir']) / benchmark_name)
-        kwargs['model_dir'] = str(Path(kwargs['model_dir']) / benchmark_name)
-        kwargs['metrics'] = list(kwargs['metrics'])
-        module.main(**kwargs)
+    kwargs.update(ctx.obj)
+    kwargs['data_dir'] = str(Path(kwargs['data_dir']) / benchmark_name)
+    kwargs['model_dir'] = str(Path(kwargs['model_dir']) / benchmark_name)
+    kwargs['metrics'] = list(kwargs['metrics'])
+    module.main(**kwargs)
 
 BENCHMARKS = [
     dms_classifier,

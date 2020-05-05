@@ -6,25 +6,16 @@ from sciml_bench.core.utils.benchmark import MultiNodeBenchmark
 from sciml_bench.core.utils.runner import MultiNodeBenchmarkRunner
 
 @pytest.fixture()
-def mocked_mlflow(mocker):
+def horovod():
     hvd.init()
-    mocker.patch('mlflow.set_tag')
-    mocker.patch('mlflow.set_tags')
-    mocker.patch('mlflow.log_artifacts')
-    mocker.patch('mlflow.log_artifact')
-    mocker.patch('mlflow.log_param')
-    mocker.patch('mlflow.log_params')
-    mocker.patch('mlflow.log_metric')
-    mocker.patch('mlflow.log_metrics')
-    return mocker
 
 @pytest.mark.forked
-def test_run_benchmark_runner_multi(tmpdir, mocked_mlflow):
+def test_run_benchmark_runner_multi(tmpdir, horovod):
     tf.keras.backend.clear_session()
     data_loader = FakeDataLoader((10, 10, 3), (1, ))
     benchmark = MultiNodeBenchmark(fake_model_fn, data_loader)
 
     cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir,
             exec_mode='train_and_predict', epochs=1)
-    MultiNodeBenchmarkRunner(benchmark).run(**cfg)
+    MultiNodeBenchmarkRunner(tmpdir, benchmark).run(**cfg)
 

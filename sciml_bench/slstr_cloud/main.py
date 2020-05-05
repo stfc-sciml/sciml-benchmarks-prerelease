@@ -7,5 +7,5 @@ from sciml_bench.core.utils.runner import build_benchmark
 def main(data_dir,  **params):
     LOGGER.info('Beginning SLSTR Cloud Benchmark')
     dataset = SLSTRDataLoader(data_dir=data_dir)
-    runner = build_benchmark(unet_v1, dataset)
+    runner = build_benchmark(params.get('model_dir'), unet_v1, dataset)
     runner.run(**params)

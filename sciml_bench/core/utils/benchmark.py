@@ -1,11 +1,10 @@
 import numpy as np
 import tensorflow as tf
-import mlflow
 from pathlib import Path
 import horovod.tensorflow.keras as hvd
+
 from sciml_bench.core.logging import LOGGER
-from sciml_bench.core.dllogger import tags
-from sciml_bench.core.utils.hooks.mlflow import MLFlowCallback, MLFlowTimingCallback
+from sciml_bench.core.callbacks import Callback, TimingCallback
 
 
 class MultiNodeBenchmark:
@@ -14,7 +13,6 @@ class MultiNodeBenchmark:
         self._model = None
         self._model_fn = model_fn
         self._dataset = dataset
-        self._results = {}
 
     def build(self, log_batch=False, loss=tf.losses.BinaryCrossentropy(), learning_rate=0.001, metrics=['accuracy'], **params):
         self._log_batch = log_batch
@@ -51,11 +49,11 @@ class MultiNodeBenchmark:
         if hvd.rank() == 0:
             # These hooks only need to be called by one instance.
             # Therefore we need to only add them on rank == 0
-            mlf_callback = MLFlowCallback(self._log_batch)
+            mlf_callback = Callback(params['model_dir'], self._log_batch)
             hooks.append(mlf_callback)
 
             # Add hook for capturing Img/s and duration
-            profiler_hook = MLFlowTimingCallback(params['global_batch_size'])
+            profiler_hook = TimingCallback(params['model_dir'], params['global_batch_size'])
             hooks.append(profiler_hook)
 
         # Add hook for capturing metrics vs. epoch
@@ -84,7 +82,6 @@ class MultiNodeBenchmark:
             model_dir.mkdir(parents=True, exist_ok=True)
             weights_file = str(model_dir / 'final_weights.h5')
             self._model.save_weights(weights_file)
-            mlflow.log_artifact(weights_file)
 
     def predict(self, lr_warmup=3, **params):
         if self._model is None:
@@ -103,10 +100,10 @@ class MultiNodeBenchmark:
         if hvd.rank() == 0:
             # These hooks only need to be called by one instance.
             # Therefore we need to only add them on rank == 0
-            mlf_callback = MLFlowCallback(self._log_batch)
+            mlf_callback = Callback(params['model_dir'], self._log_batch)
             hooks.append(mlf_callback)
 
-            profiler_hook = MLFlowTimingCallback(params['global_batch_size'])
+            profiler_hook = TimingCallback(params['model_dir'], params['global_batch_size'])
             hooks.append(profiler_hook)
 
         LOGGER.info('Begin Predict...')

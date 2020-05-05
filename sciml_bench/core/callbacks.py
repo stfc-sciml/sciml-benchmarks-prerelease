@@ -1,49 +1,18 @@
 import time
 import tensorflow as tf
-import mlflow
-from mpi4py import MPI
 from threading import Timer
 from abc import abstractmethod, ABCMeta
 import horovod.tensorflow as hvd
+from pathlib import Path
 
+from sciml_bench.core.tracking import TrackingClient
 from sciml_bench.core.dllogger import AverageMeter
 from sciml_bench.core.system import DeviceSpecs, HostSpec, bytesto
 
+class TimingCallback(tf.keras.callbacks.Callback):
 
-class DistributedMLFlowRun:
-
-    def __init__(self):
-        try:
-            self._comm = MPI.COMM_WORLD
-            self._rank = self._comm.Get_rank()
-        except ImportError:
-            self._comm = None
-            self._rank = 0
-
-    def __enter__(self):
-        """Helper function to create a mlflow run even during MPI runs"""
-        if self._rank == 0:
-            active_run = mlflow.start_run()
-            data = {'run_id' : active_run.info.run_id}
-        else:
-            data = None
-
-        # If comm is none then we have not MPI support. Just quit.
-        if self._comm is None:
-            return
-
-        data = self._comm.bcast(data, root=0)
-
-        if self._rank != 0:
-            mlflow.start_run(data['run_id'])
-
-    def __exit__(self, *args):
-        """Helper function to end a mlflow run even during MPI runs"""
-        mlflow.end_run()
-
-class MLFlowTimingCallback(tf.keras.callbacks.Callback):
-
-    def __init__(self, batch_size, warmup_steps=1):
+    def __init__(self, output_dir,batch_size, warmup_steps=1):
+        self._db = TrackingClient(Path(output_dir) / 'logs.json')
         self._current_step = 0
         self._warmup_steps = warmup_steps
         self._batch_size = batch_size
@@ -90,50 +59,51 @@ class MLFlowTimingCallback(tf.keras.callbacks.Callback):
         if epoch < self._warmup_steps:
             return
 
-        mlflow.log_metric('epoch_duration', time.time() - self._epoch_begin_time, step=epoch)
-        mlflow.log_metric('train_samples_per_sec', self._train_meter.get_value(), step=epoch)
+        self._db.log_metric('train_epoch_duration', time.time() - self._epoch_begin_time, step=epoch)
+        self._db.log_metric('train_samples-per-sec', self._train_meter.get_value(), step=epoch)
 
     def on_train_begin(self, logs=None):
         self._train_begin_time = time.time()
 
     def on_train_end(self, logs=None):
-        mlflow.log_metric('train_duration', time.time() - self._train_begin_time)
+        self._db.log_metric('train_duration', time.time() - self._train_begin_time)
 
     def on_test_begin(self,logs=None):
         self._test_begin_time = time.time()
 
     def on_test_end(self,logs=None):
-        mlflow.log_metric('val_duration', time.time() - self._test_begin_time)
-        mlflow.log_metric('val_samples_per_sec', self._test_meter.get_value())
+        self._db.log_metric('val_duration', time.time() - self._test_begin_time)
+        self._db.log_metric('val_samples-per-sec', self._test_meter.get_value())
 
     def on_predict_begin(self, logs=None):
         self._predict_begin_time = time.time()
 
     def on_predict_end(self, logs=None):
-        mlflow.log_metric('test_duration', time.time() - self._predict_begin_time)
-        mlflow.log_metric('test_samples_per_sec', self._predict_meter.get_value())
+        self._db.log_metric('test_duration', time.time() - self._predict_begin_time)
+        self._db.log_metric('test_samples-per-sec', self._predict_meter.get_value())
 
 
-class MLFlowCallback(tf.keras.callbacks.Callback):
+class Callback(tf.keras.callbacks.Callback):
 
-    def __init__(self, log_batch=False):
+    def __init__(self, output_dir, log_batch=False):
         self._log_batch = log_batch
+        self._db = TrackingClient(Path(output_dir) / 'logs.json')
 
     def on_train_batch_end(self, batch, logs=None):
         if self._log_batch:
-            mlflow.log_metrics(logs, step=batch)
+            self._db.log_metrics(logs, step=batch)
 
     def on_test_batch_end(self, batch, logs=None):
         if self._log_batch:
-            mlflow.log_metrics(logs, step=batch)
+            self._db.log_metrics(logs, step=batch)
 
     def on_predict_batch_end(self, batch, logs=None):
         if self._log_batch:
-            mlflow.log_metrics(logs, step=batch)
+            self._db.log_metrics(logs, step=batch)
 
     def on_epoch_end(self, epoch, logs=None):
         if not self._log_batch:
-            mlflow.log_metrics(logs, step=epoch)
+            self._db.log_metrics(logs, step=epoch)
 
 
 class RepeatedTimer:
@@ -174,32 +144,16 @@ class RepeatedTimer:
     def __exit__(self ,type, value, traceback):
         self.stop()
 
+class DeviceLogger(RepeatedTimer):
 
-def log_host_stats(name, interval=0.5):
-    """Decorator to log stats about the host system to mlflow for this function call"""
-    def _wrap(function):
-        def _inner(*args, **kwargs):
-            with MLFlowHostLogger(name=name, interval=interval):
-                return function(*args, **kwargs)
-        return _inner
-    return _wrap
+    def __init__(self, output_dir, name='',  prefix='', *args, **kwargs):
+        super(DeviceLogger, self).__init__(*args, **kwargs)
 
-def log_device_stats(name, interval=0.5):
-    """Decorator to log stats about devices to mlflow for this function call"""
-    def _wrap(function):
-        def _inner(*args, **kwargs):
-            with MLFlowDeviceLogger(name=name, interval=interval):
-                return function(*args, **kwargs)
-        return _inner
-    return _wrap
-
-class MLFlowDeviceLogger(RepeatedTimer):
-
-    def __init__(self, name='', *args, **kwargs):
-        super(MLFlowDeviceLogger, self).__init__(*args, **kwargs)
+        file_name = 'node_{}_devices.json'.format(name)
+        self._db = TrackingClient(Path(output_dir) / file_name)
 
         self._step = 0
-        self._name = name + '_'
+        self._name = prefix + '_' + name + '_'
         self._spec = DeviceSpecs()
 
     def run(self):
@@ -218,18 +172,19 @@ class MLFlowDeviceLogger(RepeatedTimer):
         # Rename the metrics to have a prefix
         metrics = {self._name + k: v for k, v in metrics.items()}
 
-        # edge case to prevent logging if the session has died
-        if mlflow.active_run() is not None:
-            mlflow.log_metrics(metrics, self._step)
+        self._db.log_metrics(metrics, self._step)
         self._step += 1
 
-class MLFlowHostLogger(RepeatedTimer):
+class HostLogger(RepeatedTimer):
 
-    def __init__(self, name='', per_device=False, *args, **kwargs):
-        super(MLFlowHostLogger, self).__init__(*args, **kwargs)
+    def __init__(self, output_dir, name='', prefix='', per_device=False, *args, **kwargs):
+        super(HostLogger, self).__init__(*args, **kwargs)
         self._step = 0
-        self._name = name + '_'
+        self._name = prefix + '_' + name + '_'
         self._spec = HostSpec(per_device=per_device)
+
+        file_name = 'node_{}_host.json'.format(name)
+        self._db = TrackingClient(Path(output_dir) / file_name)
 
     def run(self):
         metrics = {}
@@ -243,36 +198,19 @@ class MLFlowHostLogger(RepeatedTimer):
         metrics = {self._name + k: v for k, v in metrics.items()}
 
         # edge case to prevent logging if the session has died
-        if mlflow.active_run() is not None:
-            mlflow.log_metrics(metrics, self._step)
+        self._db.log_metrics(metrics, self._step)
 
         self._step += 1
-
-
-class MLFlowLoggerProxy():
-
-    def __init__(self, node_name):
-        self._prefix = node_name + '_'
-
-    def set_tag(self, name, value):
-        mlflow.set_tag(self._prefix + name, value)
-
-
-    def set_tags(self, tags):
-        renamed_tags = {}
-        for key, value in tags.items():
-            renamed_tags[self._prefix + key] = value
-        mlflow.set_tags(renamed_tags)
 
 class NodeLogger:
 
     _host_logger = None
     _device_logger = None
 
-    def __init__(self, name, interval):
+    def __init__(self, output_dir, name='', prefix='', interval=0.1):
         if hvd.local_rank() == 0:
-            self._host_logger = MLFlowHostLogger(name=name, interval=interval)
-            self._device_logger = MLFlowDeviceLogger(name=name, interval=interval)
+            self._host_logger = HostLogger(output_dir, name=name, prefix=prefix, interval=interval)
+            self._device_logger = DeviceLogger(output_dir, name=name, prefix=prefix,interval=interval)
 
     def has_loggers(self):
         return self._host_logger is not None and self._device_logger is not None

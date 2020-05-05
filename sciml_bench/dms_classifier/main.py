@@ -8,5 +8,5 @@ def main(data_dir, **params):
     LOGGER.info('Beginning DMS Classifier Benchmark')
     dataset = DMSDataset(data_dir=data_dir,
                                seed=params['seed'])
-    runner = build_benchmark(small_cnn_classifier, dataset)
+    runner = build_benchmark(params.get('model_dir'), small_cnn_classifier, dataset)
     runner.run(**params)
