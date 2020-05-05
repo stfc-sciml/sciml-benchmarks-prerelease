@@ -51,10 +51,22 @@ class TrackingClient:
         query = Query()
         return self._db.search((query.name == name) & (query.type == 'metric'))
 
+    def get_metrics(self):
+        query = Query()
+        return self._db.search(query.type == 'metric')
+
     def get_param(self, name):
         query = Query()
         return self._db.search((query.name == name) & (query.type == 'param'))
 
+    def get_params(self):
+        query = Query()
+        return self._db.search(query.type == 'param')
+
     def get_tag(self, name):
         query = Query()
         return self._db.search((query.name == name) & (query.type == 'tag'))
+
+    def get_tags(self):
+        query = Query()
+        return self._db.search(query.type == 'tag')

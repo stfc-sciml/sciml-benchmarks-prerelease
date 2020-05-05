@@ -29,6 +29,7 @@ with warnings.catch_warnings():
     import horovod.tensorflow as hvd
 
 import sciml_bench
+from sciml_bench.core.report import create_report
 from sciml_bench.core.logging import LOGGER
 from sciml_bench.core.download import download_datasets
 
@@ -180,6 +181,22 @@ def _run_benchmark(module, ctx, **kwargs):
     kwargs['model_dir'] = str(Path(kwargs['model_dir']).joinpath(benchmark_name).joinpath(folder))
     kwargs['metrics'] = list(kwargs['metrics'])
     module.main(**kwargs)
+
+@cli.command(help='Generate report from benchmark runs')
+@click.pass_context
+def report(ctx, *args, **kwargs):
+    kwargs.update(ctx.obj)
+    model_dir = kwargs.get('model_dir')
+
+    for benchmark in BENCHMARKS:
+        benchmark_folder = Path(model_dir) / benchmark.name.replace('-', '_')
+        if not benchmark_folder.exists():
+            continue
+
+        folders = [x for x in benchmark_folder.iterdir() if x.is_dir()]
+
+        for folder in folders:
+            create_report(folder)
 
 BENCHMARKS = [
     dms_classifier,
