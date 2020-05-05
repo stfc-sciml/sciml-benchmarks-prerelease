@@ -174,7 +174,6 @@ def _run_benchmark(module, ctx, **kwargs):
 
     now = datetime.now()
     folder = now.strftime("%Y-%m-%d-%H%M")
-    print(folder)
 
     kwargs.update(ctx.obj)
     kwargs['data_dir'] = str(Path(kwargs['data_dir']) / benchmark_name)

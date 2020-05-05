@@ -153,7 +153,7 @@ class DeviceLogger(RepeatedTimer):
         self._db = TrackingClient(Path(output_dir) / file_name)
 
         self._step = 0
-        self._name = prefix + '_' + name + '_'
+        self._name = prefix + '_'
         self._spec = DeviceSpecs()
 
     def run(self):
@@ -180,7 +180,7 @@ class HostLogger(RepeatedTimer):
     def __init__(self, output_dir, name='', prefix='', per_device=False, *args, **kwargs):
         super(HostLogger, self).__init__(*args, **kwargs)
         self._step = 0
-        self._name = prefix + '_' + name + '_'
+        self._name = prefix + '_'
         self._spec = HostSpec(per_device=per_device)
 
         file_name = 'node_{}_host.json'.format(name)
