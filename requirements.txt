@@ -16,3 +16,4 @@ py-cpuinfo
 pytest-mock
 horovod
 mpi4py
+bokeh
