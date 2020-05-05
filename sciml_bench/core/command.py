@@ -21,6 +21,7 @@ import sys
 import yaml
 import click
 import click_config_file
+from datetime import datetime
 from pathlib import Path
 
 with warnings.catch_warnings():
@@ -171,9 +172,13 @@ def download(*args, **kwargs):
 def _run_benchmark(module, ctx, **kwargs):
     benchmark_name = ctx.command.name.replace('-', '_')
 
+    now = datetime.now()
+    folder = now.strftime("%Y-%m-%d-%H%M")
+    print(folder)
+
     kwargs.update(ctx.obj)
     kwargs['data_dir'] = str(Path(kwargs['data_dir']) / benchmark_name)
-    kwargs['model_dir'] = str(Path(kwargs['model_dir']) / benchmark_name)
+    kwargs['model_dir'] = str(Path(kwargs['model_dir']).joinpath(benchmark_name).joinpath(folder))
     kwargs['metrics'] = list(kwargs['metrics'])
     module.main(**kwargs)
 
