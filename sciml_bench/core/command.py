@@ -213,7 +213,15 @@ def run(ctx, benchmark_names, **params):
     for name in benchmark_names:
         benchmark = BENCHMARK_DICT[name]
         LOGGER.info('Running %s benchmark', benchmark.name)
-        ctx.invoke(benchmark, data_dir=data_dir / benchmark.name, model_dir=model_dir)
+
+        benchmark_data_dir = data_dir / benchmark.name
+
+        if not benchmark_data_dir.exists():
+            LOGGER.error('Data directory {} does not exist! Is the data for benchmark {} downloaded?'.format(str(benchmark_data_dir), name))
+            LOGGER.error('Skipping benchmark {}'.format(name))
+            continue
+
+        ctx.invoke(benchmark, data_dir=benchmark_data_dir, model_dir=model_dir)
 
 @cli.command(help='Display system information')
 def sysinfo():
