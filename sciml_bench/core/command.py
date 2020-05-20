@@ -15,6 +15,7 @@ os.environ['TF_ENABLE_WINOGRAD_NONFUSED'] = 'data'
 os.environ['TF_SYNC_ON_FINISH'] = '0'
 os.environ['TF_AUTOTUNE_THRESHOLD'] = '2'
 
+import string
 import logging
 import warnings
 import sys
@@ -63,8 +64,10 @@ def print_header():
     data = _comm.bcast(data, root=0)
 
     data = [data] if not isinstance(data, list) else data
+
+    plurality = 'es' if len(data) > 1 else ''
     for node_name, local_size in data:
-        LOGGER.info('%s has %s processes', node_name, local_size)
+        LOGGER.info('%s has %s process%s', node_name, local_size, plurality)
 
 def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
     if cpu_only:
@@ -118,22 +121,6 @@ def cmd_list(ctx, name, **kwargs):
             downloaded = path.exists()
             click.echo('{}\t\tDownloaded: {}'.format(benchmark.name, downloaded))
 
-@cli.command(help='Run all benchmarks with default settings')
-@click_config_file.configuration_option(provider=yaml_provider, implicit=False)
-@click.pass_context
-def all(ctx, data_dir, model_dir, **params):
-    model_dir = Path(model_dir)
-    model_dir.mkdir(parents=True, exist_ok=True)
-
-    data_dir = Path(data_dir)
-
-    if not data_dir.exists():
-        click.echo("Data directory {} does not exist!".format(data_dir))
-        sys.exit()
-
-    for benchmark in BENCHMARKS:
-        LOGGER.info('Running %s benchmark', benchmark.name)
-        ctx.invoke(benchmark, data_dir=data_dir / benchmark.name, model_dir=model_dir)
 
 @cli.command(help='Run the DMS Classifier Benchmark')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
@@ -171,6 +158,94 @@ def slstr_cloud(ctx, **kwargs):
     import sciml_bench.slstr_cloud.main as slstr_cloud_mod
     _run_benchmark(slstr_cloud_mod, ctx, **kwargs)
 
+# List of all benchmark entrypoint functions
+BENCHMARKS = [
+    dms_classifier,
+    em_denoise,
+    slstr_cloud
+]
+
+# Dict of all benchmark names -> benchmark functions
+BENCHMARK_DICT = {b.name: b for b in BENCHMARKS}
+
+@cli.command(help='Run SciML benchmarks')
+@click.argument('benchmark_names', nargs=-1, type=click.Choice(['all', ] + [b.name for b in BENCHMARKS]))
+@click_config_file.configuration_option(provider=yaml_provider, implicit=False)
+@click.pass_context
+def run(ctx, benchmark_names, **params):
+    print_header()
+
+    model_dir = ctx.obj['model_dir']
+    data_dir = ctx.obj['data_dir']
+
+    data_dir = Path(data_dir)
+
+    if not data_dir.exists():
+        click.echo("Data directory {} does not exist!".format(data_dir))
+        click.abort()
+
+    LOGGER.info('Model directory is: %s', str(model_dir))
+    LOGGER.info('Data directory is: %s', str(data_dir))
+
+    # If no benchmarks specified or all then run everything
+    if len(benchmark_names) == 0 or 'all' in benchmark_names:
+        benchmark_names = BENCHMARK_DICT.keys()
+
+    # Sanity check: do all the benchmarks exist?
+    for name in benchmark_names:
+        if name not in BENCHMARK_DICT:
+            LOGGER.error('Benchmark {} does not exist!'.format(name))
+            click.abort()
+
+    # Log which benchmarks we will run
+    LOGGER.info('Selected the following benchmarks:')
+    for name in benchmark_names:
+        LOGGER.info('{}'.format(str(name)))
+
+    # Ok, run all requested benchmarks
+    for name in benchmark_names:
+        benchmark = BENCHMARK_DICT[name]
+        LOGGER.info('Running %s benchmark', benchmark.name)
+        ctx.invoke(benchmark, data_dir=data_dir / benchmark.name, model_dir=model_dir)
+
+@cli.command(help='Display system information')
+def sysinfo():
+    from sciml_bench.core.system import HostSpec, DeviceSpecs, bytesto
+
+    host_spec = HostSpec()
+
+    click.echo('------------------')
+    click.echo('Host')
+    click.echo('------------------')
+    click.echo('Node name: {}'.format(host_spec.node_name))
+    click.echo('IP name: {}'.format(host_spec.ip_address))
+    click.echo('System name: {}'.format(host_spec.system))
+    click.echo('System release: {}'.format(host_spec.release))
+    click.echo('No. of cores: {}'.format(host_spec.num_cores))
+    click.echo('Total Memory: {:.2f}GB'.format(bytesto(host_spec.total_memory, 'g')))
+    for name, value in host_spec.cpu_info.items():
+        name = name.replace('_', ' ')
+        name = string.capwords(name)
+        name = name.replace('Cpu', 'CPU')
+        click.echo('{}: {}'.format(name, value))
+
+    device_spec = DeviceSpecs()
+    click.echo('------------------')
+    click.echo('Devices')
+    click.echo('------------------')
+    click.echo('Found {} device{}'.format(device_spec.device_count, 's' if device_spec.device_count > 1 else ''))
+
+    for number in range(device_spec.device_count):
+        name = 'gpu_{}'.format(number)
+        click.echo('------------------')
+        click.echo('Device {}'.format(number))
+        click.echo('------------------')
+        click.echo('Device name: {}'.format(device_spec.names[name + '_name']))
+        memory = device_spec.memory[name + '_memory_total']
+        click.echo('Total Memory: {:.2f}GB'.format(bytesto(memory, 'g')))
+
+
+
 @cli.command(help='Download benchmark datasets from remote store')
 @click.argument('name', type=click.Choice(['all', 'em_denoise', 'dms_classifier', 'slstr_cloud']))
 @click.argument('destination')
@@ -207,11 +282,6 @@ def report(ctx, *args, **kwargs):
         for folder in folders:
             create_report(folder)
 
-BENCHMARKS = [
-    dms_classifier,
-    em_denoise,
-    slstr_cloud
-]
 
 if __name__ == "__main__":
     cli(auto_envvar_prefix='SCIML_BENCH')
