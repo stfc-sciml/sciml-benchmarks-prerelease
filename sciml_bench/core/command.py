@@ -83,24 +83,8 @@ def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
 
 @click.group()
 @click.pass_context
-@click.option('--data-dir', default='data', help='Data directory location', envvar='SCIML_BENCH_DATA_DIR')
-@click.option('--model-dir', default='sciml-bench-out', type=str, help='Output directory for model results', envvar='SCIML_BENCH_MODEL_DIR')
-@click.option('--lr-warmup', default=3, type=int, help='Number of epochs over which to scale the learning rate.')
-@click.option('--cpu-only', default=False, is_flag=True, help='Disable GPU execution')
-@click.option('--use-amp', default=False, is_flag=True, help='Enable Automatic Mixed Precision')
-@click.option('--exec-mode', default='train_and_predict', type=click.Choice(['train', 'train_and_predict', 'predict']), help='Set the execution mode')
-@click.option('--log-batch', default=False, is_flag=True, help='Whether to log metrics by batch or by epoch')
-@click.option('--log-interval', default=0.5, help='Logging interval for system metrics')
-@click.option('--seed', default=42, type=int, help='Random seed to use for initialization of random state')
-@click.option('--log-level', default=logging.INFO, type=int, help='Log level to use for printing to stdout')
 def cli(ctx, tracking_uri=None, **kwargs):
-    warnings.filterwarnings('ignore', category=DeprecationWarning)
-    with warnings.catch_warnings():
-        hvd.init()
-        ctx.ensure_object(dict)
-        ctx.obj.update(kwargs)
-
-        set_environment_variables(**kwargs)
+    pass
 
 @cli.command('list', help='List benchmarks')
 @click.argument('name', default='all', type=click.Choice(['all', 'benchmarks', 'datasets']))
@@ -122,7 +106,7 @@ def cmd_list(ctx, name, **kwargs):
             click.echo('{}\t\tDownloaded: {}'.format(benchmark.name, downloaded))
 
 
-@cli.command(help='Run the DMS Classifier Benchmark')
+@cli.command(help='Run the DMS Classifier Benchmark', hidden=True)
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
 @click.pass_context
 @click.option('--epochs', default=10, help='Set number of epochs')
@@ -134,7 +118,7 @@ def dms_classifier(ctx, **kwargs):
     import sciml_bench.dms_classifier.main as dms_classifier_mod
     _run_benchmark(dms_classifier_mod, ctx, **kwargs)
 
-@cli.command(help='Run the Electron Microscopy Denoise Benchmark')
+@cli.command(help='Run the Electron Microscopy Denoise Benchmark', hidden=True)
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
 @click.pass_context
 @click.option('--epochs', default=10, help='Set number of epochs')
@@ -146,7 +130,7 @@ def em_denoise(ctx, **kwargs):
     import sciml_bench.em_denoise.main as em_denoise_mod
     _run_benchmark(em_denoise_mod, ctx, **kwargs)
 
-@cli.command(help='Run the SLSTR Cloud Segmentation Benchmark')
+@cli.command(help='Run the SLSTR Cloud Segmentation Benchmark', hidden=True)
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
 @click.pass_context
 @click.option('--epochs', default=30, help='Set number of epochs')
@@ -170,9 +154,26 @@ BENCHMARK_DICT = {b.name: b for b in BENCHMARKS}
 
 @cli.command(help='Run SciML benchmarks')
 @click.argument('benchmark_names', nargs=-1, type=click.Choice(['all', ] + [b.name for b in BENCHMARKS]))
+@click.option('--data-dir', default='data', help='Data directory location', envvar='SCIML_BENCH_DATA_DIR')
+@click.option('--model-dir', default='sciml-bench-out', type=str, help='Output directory for model results', envvar='SCIML_BENCH_MODEL_DIR')
+@click.option('--lr-warmup', default=3, type=int, help='Number of epochs over which to scale the learning rate.')
+@click.option('--cpu-only', default=False, is_flag=True, help='Disable GPU execution')
+@click.option('--use-amp', default=False, is_flag=True, help='Enable Automatic Mixed Precision')
+@click.option('--exec-mode', default='train_and_predict', type=click.Choice(['train', 'train_and_predict', 'predict']), help='Set the execution mode')
+@click.option('--log-batch', default=False, is_flag=True, help='Whether to log metrics by batch or by epoch')
+@click.option('--log-interval', default=0.5, help='Logging interval for system metrics')
+@click.option('--seed', default=42, type=int, help='Random seed to use for initialization of random state')
+@click.option('--log-level', default=logging.INFO, type=int, help='Log level to use for printing to stdout')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
 @click.pass_context
 def run(ctx, benchmark_names, **params):
+    warnings.filterwarnings('ignore', category=DeprecationWarning)
+    with warnings.catch_warnings():
+        hvd.init()
+        ctx.ensure_object(dict)
+        ctx.obj.update(params)
+
+    set_environment_variables(**params)
     print_header()
 
     model_dir = ctx.obj['model_dir']
