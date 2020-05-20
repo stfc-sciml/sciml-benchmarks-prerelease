@@ -97,18 +97,26 @@ def cli(ctx, tracking_uri=None, **kwargs):
         ctx.ensure_object(dict)
         ctx.obj.update(kwargs)
 
-        print_header()
         set_environment_variables(**kwargs)
 
 @cli.command('list', help='List benchmarks')
+@click.argument('name', default='all', type=click.Choice(['all', 'benchmarks', 'datasets']))
 @click.pass_context
-def cmd_list(ctx, **kwargs):
-    click.echo('Available Benchmarks\n')
+def cmd_list(ctx, name, **kwargs):
+    if name == 'benchmarks' or name == 'all':
+        click.echo('Benchmarks\n')
 
-    for benchmark in BENCHMARKS:
-        path = Path(ctx.obj['data_dir']).joinpath(benchmark.name.replace('-', '_'))
-        downloaded = path.exists()
-        click.echo('{}\t\tDownloaded: {}'.format(benchmark.name, downloaded))
+        for benchmark in BENCHMARKS:
+            click.echo(benchmark.name)
+
+    if name == 'datasets' or name == 'all':
+        click.echo('')
+        click.echo('Datasets\n')
+
+        for benchmark in BENCHMARKS:
+            path = Path(ctx.obj['data_dir']).joinpath(benchmark.name.replace('-', '_'))
+            downloaded = path.exists()
+            click.echo('{}\t\tDownloaded: {}'.format(benchmark.name, downloaded))
 
 @cli.command(help='Run all benchmarks with default settings')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
@@ -169,6 +177,7 @@ def slstr_cloud(ctx, **kwargs):
 @click.option('--user', default=None, help='Username to use to login to remote data store')
 def download(*args, **kwargs):
     download_datasets(*args, **kwargs)
+
 
 def _run_benchmark(module, ctx, **kwargs):
     benchmark_name = ctx.command.name.replace('-', '_')
