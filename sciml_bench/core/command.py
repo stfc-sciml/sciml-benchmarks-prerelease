@@ -165,9 +165,10 @@ BENCHMARK_DICT = {b.name: b for b in BENCHMARKS}
 @click.option('--seed', default=42, type=int, help='Random seed to use for initialization')
 @click.option('--verbosity', default=2, type=int, help='Verbosity level to use. 0 is silence, 3 is maximum information')
 @click.option('--log-level', default=logging.INFO, type=int, help='Log level to use for printing to stdout')
+@click.option('--skip', default=True, type=bool, help='Whether to skip or exit on encountering an exception')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
 @click.pass_context
-def run(ctx, benchmark_names, **params):
+def run(ctx, benchmark_names, skip=True, **params):
     warnings.filterwarnings('ignore', category=DeprecationWarning)
     with warnings.catch_warnings():
         hvd.init()
@@ -214,14 +215,27 @@ def run(ctx, benchmark_names, **params):
         benchmark = BENCHMARK_DICT[name]
         LOGGER.info('Running %s benchmark', benchmark.name)
 
-        benchmark_data_dir = data_dir / benchmark.name
+        benchmark_data_dir = data_dir / benchmark.name.replace('-', '_')
 
         if not benchmark_data_dir.exists():
             LOGGER.error('Data directory {} does not exist! Is the data for benchmark {} downloaded?'.format(str(benchmark_data_dir), name))
-            LOGGER.error('Skipping benchmark {}'.format(name))
-            continue
 
-        ctx.invoke(benchmark, data_dir=benchmark_data_dir, model_dir=model_dir)
+            if skip:
+                LOGGER.error('Skipping benchmark {}'.format(name))
+                continue
+            else:
+                click.abort()
+
+        try:
+            ctx.invoke(benchmark, data_dir=benchmark_data_dir, model_dir=model_dir)
+        except Exception as e:
+            LOGGER.error('Failed to run benchmark {} due to unhandled exception.\n{}'.format(name, e))
+
+            if skip:
+                LOGGER.error('Skipping benchmark {}'.format(name))
+                continue
+            else:
+                click.abort()
 
 @cli.command(help='Display system information')
 def sysinfo():
