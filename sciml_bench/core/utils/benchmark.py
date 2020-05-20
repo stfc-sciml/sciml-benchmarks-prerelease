@@ -30,8 +30,7 @@ class MultiNodeBenchmark:
                     experimental_run_tf_function=False)
 
     def train(self, epochs=1, lr_warmup=3, **params):
-
-        verbose = 1 if hvd.rank() == 0 else 0
+        verbose = 1 if params.get('verbosity') > 1 and hvd.rank() == 0 else 0
 
         if self._model is None:
             raise RuntimeError("Model has not been built!\n \
@@ -43,7 +42,7 @@ class MultiNodeBenchmark:
         hooks = [
             hvd.callbacks.BroadcastGlobalVariablesCallback(0),
             hvd.callbacks.MetricAverageCallback(),
-            hvd.callbacks.LearningRateWarmupCallback(steps_per_epoch=spe, warmup_epochs=lr_warmup, verbose=1),
+            hvd.callbacks.LearningRateWarmupCallback(steps_per_epoch=spe, warmup_epochs=lr_warmup, verbose=0),
         ]
 
         if hvd.rank() == 0:
@@ -94,7 +93,7 @@ class MultiNodeBenchmark:
         hooks = [
             hvd.callbacks.BroadcastGlobalVariablesCallback(0),
             hvd.callbacks.MetricAverageCallback(),
-            hvd.callbacks.LearningRateWarmupCallback(steps_per_epoch=predict_steps, warmup_epochs=lr_warmup, verbose=1),
+            hvd.callbacks.LearningRateWarmupCallback(steps_per_epoch=predict_steps, warmup_epochs=lr_warmup, verbose=0),
         ]
 
         if hvd.rank() == 0:
@@ -110,7 +109,7 @@ class MultiNodeBenchmark:
         LOGGER.info('Predicting for {} steps'.format(predict_steps))
 
         dataset = self._dataset.test_fn(params['batch_size'])
-        verbose = 1 if hvd.rank() == 0 else 0
+        verbose = 1 if params.get('verbosity') > 1 and hvd.rank() == 0 else 0
 
         LOGGER.debug('Evaluate Start')
         self._model.evaluate(dataset, steps=predict_steps, callbacks=hooks, verbose=verbose)

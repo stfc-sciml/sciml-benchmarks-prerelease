@@ -162,7 +162,8 @@ BENCHMARK_DICT = {b.name: b for b in BENCHMARKS}
 @click.option('--exec-mode', default='train_and_predict', type=click.Choice(['train', 'train_and_predict', 'predict']), help='Set the execution mode')
 @click.option('--log-batch', default=False, is_flag=True, help='Whether to log metrics by batch or by epoch')
 @click.option('--log-interval', default=0.5, help='Logging interval for system metrics')
-@click.option('--seed', default=42, type=int, help='Random seed to use for initialization of random state')
+@click.option('--seed', default=42, type=int, help='Random seed to use for initialization')
+@click.option('--verbosity', default=2, type=int, help='Verbosity level to use. 0 is silence, 3 is maximum information')
 @click.option('--log-level', default=logging.INFO, type=int, help='Log level to use for printing to stdout')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
 @click.pass_context
@@ -174,7 +175,12 @@ def run(ctx, benchmark_names, **params):
         ctx.obj.update(params)
 
     set_environment_variables(**params)
-    print_header()
+
+    LOGGER.setLevel(logging.ERROR)
+
+    if params.get('verbosity') > 2:
+        print_header()
+        LOGGER.setLevel(logging.INFO)
 
     model_dir = ctx.obj['model_dir']
     data_dir = ctx.obj['data_dir']
