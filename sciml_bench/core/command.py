@@ -1,20 +1,5 @@
 import os
-
-
-# Optimization flags
-os.environ['CUDA_CACHE_DISABLE'] = '0'
-
-os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
-
-os.environ['TF_USE_CUDNN_BATCHNORM_SPATIAL_PERSISTENT'] = '1'
-
-os.environ['TF_ADJUST_HUE_FUSED'] = 'data'
-os.environ['TF_ADJUST_SATURATION_FUSED'] = 'data'
-os.environ['TF_ENABLE_WINOGRAD_NONFUSED'] = 'data'
-
-os.environ['TF_SYNC_ON_FINISH'] = '0'
-os.environ['TF_AUTOTUNE_THRESHOLD'] = '2'
-
+import traceback
 import string
 import logging
 import warnings
@@ -24,10 +9,6 @@ import click
 import click_config_file
 from datetime import datetime
 from pathlib import Path
-
-with warnings.catch_warnings():
-    warnings.filterwarnings('ignore', category=DeprecationWarning)
-    import horovod.tensorflow as hvd
 
 import sciml_bench
 from sciml_bench.core.report import create_report
@@ -40,6 +21,7 @@ def yaml_provider(file_path, cmd_name):
         return cfg
 
 def print_header():
+    import horovod.tensorflow as hvd
     if hvd.rank() == 0:
         text = """
 
@@ -70,40 +52,42 @@ def print_header():
         LOGGER.info('%s has %s process%s', node_name, local_size, plurality)
 
 def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
+    # Optimization flags
+    os.environ['CUDA_CACHE_DISABLE'] = '0'
+
+    os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
+
+    os.environ['TF_USE_CUDNN_BATCHNORM_SPATIAL_PERSISTENT'] = '1'
+
+    os.environ['TF_ADJUST_HUE_FUSED'] = 'data'
+    os.environ['TF_ADJUST_SATURATION_FUSED'] = 'data'
+    os.environ['TF_ENABLE_WINOGRAD_NONFUSED'] = 'data'
+
+    os.environ['TF_SYNC_ON_FINISH'] = '0'
+    os.environ['TF_AUTOTUNE_THRESHOLD'] = '2'
+
     if cpu_only:
         os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
     if use_amp:
         os.environ['TF_ENABLE_AUTO_MIXED_PRECISION'] = '1'
 
-    LOGGER.setLevel(kwargs['log_level'])
-    if kwargs['log_level'] < logging.INFO:
+    if kwargs['verbosity'] >= 3:
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = '-1'
+
+    # Try and import tensorflow to check for any issues
+    try:
+        import tensorflow as tf
+    except Exception as e:
+        LOGGER.debug(traceback.format_exc())
+        LOGGER.critical('Fatal issue importing Tensorflow: %s', e)
+        sys.exit(1)
 
 
 @click.group()
 @click.pass_context
 def cli(ctx, tracking_uri=None, **kwargs):
     pass
-
-@cli.command('list', help='List benchmarks')
-@click.argument('name', default='all', type=click.Choice(['all', 'benchmarks', 'datasets']))
-@click.pass_context
-def cmd_list(ctx, name, **kwargs):
-    if name == 'benchmarks' or name == 'all':
-        click.echo('Benchmarks\n')
-
-        for benchmark in BENCHMARKS:
-            click.echo(benchmark.name)
-
-    if name == 'datasets' or name == 'all':
-        click.echo('')
-        click.echo('Datasets\n')
-
-        for benchmark in BENCHMARKS:
-            path = Path(ctx.obj['data_dir']).joinpath(benchmark.name.replace('-', '_'))
-            downloaded = path.exists()
-            click.echo('{}\t\tDownloaded: {}'.format(benchmark.name, downloaded))
 
 
 @cli.command(help='Run the DMS Classifier Benchmark', hidden=True)
@@ -142,6 +126,18 @@ def slstr_cloud(ctx, **kwargs):
     import sciml_bench.slstr_cloud.main as slstr_cloud_mod
     _run_benchmark(slstr_cloud_mod, ctx, **kwargs)
 
+def _run_benchmark(module, ctx, **kwargs):
+    benchmark_name = ctx.command.name.replace('-', '_')
+
+    now = datetime.now()
+    folder = now.strftime("%Y-%m-%d-%H%M")
+
+    kwargs.update(ctx.obj)
+    kwargs['data_dir'] = str(Path(kwargs['data_dir']) / benchmark_name)
+    kwargs['model_dir'] = str(Path(kwargs['model_dir']).joinpath(benchmark_name).joinpath(folder))
+    kwargs['metrics'] = list(kwargs['metrics'])
+    module.main(**kwargs)
+
 # List of all benchmark entrypoint functions
 BENCHMARKS = [
     dms_classifier,
@@ -151,6 +147,27 @@ BENCHMARKS = [
 
 # Dict of all benchmark names -> benchmark functions
 BENCHMARK_DICT = {b.name: b for b in BENCHMARKS}
+
+
+@cli.command('list', help='List benchmarks')
+@click.argument('name', default='all', type=click.Choice(['all', 'benchmarks', 'datasets']))
+@click.option('--data-dir', default='data', help='Data directory location', envvar='SCIML_BENCH_DATA_DIR')
+@click.pass_context
+def cmd_list(ctx, name, data_dir):
+    if name == 'benchmarks' or name == 'all':
+        click.echo('Benchmarks\n')
+
+        for benchmark in BENCHMARKS:
+            click.echo(benchmark.name)
+
+    if name == 'datasets' or name == 'all':
+        click.echo('')
+        click.echo('Datasets\n')
+
+        for benchmark in BENCHMARKS:
+            path = Path(data_dir).joinpath(benchmark.name.replace('-', '_'))
+            downloaded = path.exists()
+            click.echo('{}\t\tDownloaded: {}'.format(benchmark.name, downloaded))
 
 @cli.command(help='Run SciML benchmarks')
 @click.argument('benchmark_names', nargs=-1, type=click.Choice(['all', ] + [b.name for b in BENCHMARKS]))
@@ -163,25 +180,33 @@ BENCHMARK_DICT = {b.name: b for b in BENCHMARKS}
 @click.option('--log-batch', default=False, is_flag=True, help='Whether to log metrics by batch or by epoch')
 @click.option('--log-interval', default=0.5, help='Logging interval for system metrics')
 @click.option('--seed', default=42, type=int, help='Random seed to use for initialization')
-@click.option('--verbosity', default=3, type=int, help='Verbosity level to use. 0 is silence, 3 is maximum information')
+@click.option('--verbosity', default=2, type=int, help='Verbosity level to use. 0 is silence, 3 is maximum information')
 @click.option('--log-level', default=logging.INFO, type=int, help='Log level to use for printing to stdout')
-@click.option('--skip', default=True, type=bool, help='Whether to skip or exit on encountering an exception')
+@click.option('--skip/--no-skip', default=True, help='Whether to skip or exit on encountering an exception')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
 @click.pass_context
 def run(ctx, benchmark_names, skip=True, **params):
-    warnings.filterwarnings('ignore', category=DeprecationWarning)
-    with warnings.catch_warnings():
-        hvd.init()
-        ctx.ensure_object(dict)
-        ctx.obj.update(params)
+
+    LOGGER.setLevel(params.get('log_level'))
+    if params.get('verbosity') < 2:
+        LOGGER.setLevel(logging.ERROR)
 
     set_environment_variables(**params)
 
-    LOGGER.setLevel(logging.ERROR)
+    warnings.filterwarnings('ignore', category=DeprecationWarning)
+    with warnings.catch_warnings():
+        try:
+            import horovod.tensorflow as hvd
+            hvd.init()
+        except Exception as e:
+            LOGGER.debug(traceback.format_exc())
+            LOGGER.critical('Error initializing Horovod: %s', e)
+
+    ctx.ensure_object(dict)
+    ctx.obj.update(params)
 
     if params.get('verbosity') > 2:
         print_header()
-        LOGGER.setLevel(logging.INFO)
 
     model_dir = ctx.obj['model_dir']
     data_dir = ctx.obj['data_dir']
@@ -189,8 +214,8 @@ def run(ctx, benchmark_names, skip=True, **params):
     data_dir = Path(data_dir)
 
     if not data_dir.exists():
-        click.echo("Data directory {} does not exist!".format(data_dir))
-        click.abort()
+        LOGGER.error("Data directory {} does not exist!".format(data_dir))
+        ctx.abort()
 
     LOGGER.info('Model directory is: %s', str(model_dir))
     LOGGER.info('Data directory is: %s', str(data_dir))
@@ -203,7 +228,7 @@ def run(ctx, benchmark_names, skip=True, **params):
     for name in benchmark_names:
         if name not in BENCHMARK_DICT:
             LOGGER.error('Benchmark {} does not exist!'.format(name))
-            click.abort()
+            ctx.abort()
 
     # Log which benchmarks we will run
     LOGGER.info('Selected the following benchmarks:')
@@ -224,18 +249,19 @@ def run(ctx, benchmark_names, skip=True, **params):
                 LOGGER.error('Skipping benchmark {}'.format(name))
                 continue
             else:
-                click.abort()
+                ctx.abort()
 
         try:
             ctx.invoke(benchmark, data_dir=benchmark_data_dir, model_dir=model_dir)
         except Exception as e:
+            LOGGER.debug(traceback.format_exc())
             LOGGER.error('Failed to run benchmark {} due to unhandled exception.\n{}'.format(name, e))
 
             if skip:
                 LOGGER.error('Skipping benchmark {}'.format(name))
                 continue
             else:
-                click.abort()
+                ctx.abort()
 
 @cli.command(help='Display system information')
 def sysinfo():
@@ -283,21 +309,11 @@ def download(*args, **kwargs):
     download_datasets(*args, **kwargs)
 
 
-def _run_benchmark(module, ctx, **kwargs):
-    benchmark_name = ctx.command.name.replace('-', '_')
-
-    now = datetime.now()
-    folder = now.strftime("%Y-%m-%d-%H%M")
-
-    kwargs.update(ctx.obj)
-    kwargs['data_dir'] = str(Path(kwargs['data_dir']) / benchmark_name)
-    kwargs['model_dir'] = str(Path(kwargs['model_dir']).joinpath(benchmark_name).joinpath(folder))
-    kwargs['metrics'] = list(kwargs['metrics'])
-    module.main(**kwargs)
 
 @cli.command(help='Generate report from benchmark runs')
+@click.option('--model-dir', default='sciml-bench-out', type=str, help='Output directory for model results', envvar='SCIML_BENCH_MODEL_DIR')
 @click.pass_context
-def report(ctx, *args, **kwargs):
+def report(ctx, model_dir, **kwargs):
     kwargs.update(ctx.obj)
     model_dir = kwargs.get('model_dir')
 
