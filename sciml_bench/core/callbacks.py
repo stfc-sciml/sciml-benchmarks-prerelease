@@ -7,11 +7,11 @@ from pathlib import Path
 
 from sciml_bench.core.tracking import TrackingClient
 from sciml_bench.core.dllogger import AverageMeter
-from sciml_bench.core.system import DeviceSpecs, HostSpec, bytesto
+from sciml_bench.core.system import DeviceSpecs, HostSpec
 
-class TimingCallback(tf.keras.callbacks.Callback):
+class TrackingCallback(tf.keras.callbacks.Callback):
 
-    def __init__(self, output_dir,batch_size, warmup_steps=1):
+    def __init__(self, output_dir,batch_size, warmup_steps=1, log_batch=False):
         self._db = TrackingClient(Path(output_dir) / 'logs.json')
         self._current_step = 0
         self._warmup_steps = warmup_steps
@@ -20,6 +20,7 @@ class TimingCallback(tf.keras.callbacks.Callback):
         self._train_meter = AverageMeter()
         self._predict_meter = AverageMeter()
         self._test_meter = AverageMeter()
+        self._log_batch = log_batch
 
     def on_train_batch_begin(self, batch, logs=None):
         self._t0 = time.time()
@@ -33,6 +34,9 @@ class TimingCallback(tf.keras.callbacks.Callback):
 
         self._train_meter.record(batch_time)
 
+        if self._log_batch:
+            self._db.log_metric('train_batch_log', logs, step=batch)
+
     def on_predict_batch_begin(self, batch, logs=None):
         self._t0 = time.time()
 
@@ -41,6 +45,9 @@ class TimingCallback(tf.keras.callbacks.Callback):
         batch_time = self._batch_size / (t1 - self._t0)
 
         self._predict_meter.record(batch_time)
+
+        if self._log_batch:
+            self._db.log_metric('predict_batch_log', logs, step=batch)
 
     def on_test_batch_begin(self, batch, logs=None):
         self._t0 = time.time()
@@ -51,6 +58,9 @@ class TimingCallback(tf.keras.callbacks.Callback):
 
         self._test_meter.record(batch_time)
 
+        if self._log_batch:
+            self._db.log_metric('test_batch_log', logs, step=batch)
+
     def on_epoch_begin(self, epoch, logs=None):
         self._epoch_begin_time = time.time()
 
@@ -59,51 +69,44 @@ class TimingCallback(tf.keras.callbacks.Callback):
         if epoch < self._warmup_steps:
             return
 
-        self._db.log_metric('train_epoch_duration', time.time() - self._epoch_begin_time, step=epoch)
-        self._db.log_metric('train_samples-per-sec', self._train_meter.get_value(), step=epoch)
+        metrics = {
+            'duration', time.time() - self._epoch_begin_time,
+            'samples_per_sec', self._train_meter.get_value()
+        }
+        metrics.update(logs)
+        self._db.log_metric('epoch_log', metrics, step=epoch)
 
     def on_train_begin(self, logs=None):
         self._train_begin_time = time.time()
 
     def on_train_end(self, logs=None):
-        self._db.log_metric('train_duration', time.time() - self._train_begin_time)
+        metrics = {
+            'duration', time.time() - self._train_begin_time
+        }
+        metrics.update(logs)
+        self._db.log_metric('train_log', metrics)
 
     def on_test_begin(self,logs=None):
         self._test_begin_time = time.time()
 
     def on_test_end(self,logs=None):
-        self._db.log_metric('val_duration', time.time() - self._test_begin_time)
-        self._db.log_metric('val_samples-per-sec', self._test_meter.get_value())
+        metrics = {
+            'duration', time.time() - self._test_begin_time,
+            'samples_per_sec', self._test_meter.get_value()
+        }
+        metrics.update(logs)
+        self._db.log_metric('test_log', metrics)
 
     def on_predict_begin(self, logs=None):
         self._predict_begin_time = time.time()
 
     def on_predict_end(self, logs=None):
-        self._db.log_metric('test_duration', time.time() - self._predict_begin_time)
-        self._db.log_metric('test_samples-per-sec', self._predict_meter.get_value())
-
-
-class Callback(tf.keras.callbacks.Callback):
-
-    def __init__(self, output_dir, log_batch=False):
-        self._log_batch = log_batch
-        self._db = TrackingClient(Path(output_dir) / 'logs.json')
-
-    def on_train_batch_end(self, batch, logs=None):
-        if self._log_batch:
-            self._db.log_metrics(logs, step=batch)
-
-    def on_test_batch_end(self, batch, logs=None):
-        if self._log_batch:
-            self._db.log_metrics(logs, step=batch)
-
-    def on_predict_batch_end(self, batch, logs=None):
-        if self._log_batch:
-            self._db.log_metrics(logs, step=batch)
-
-    def on_epoch_end(self, epoch, logs=None):
-        if not self._log_batch:
-            self._db.log_metrics(logs, step=epoch)
+        metrics = {
+            'duration', time.time() - self._predict_begin_time,
+            'samples_per_sec', self._predict_meter.get_value()
+        }
+        metrics.update(logs)
+        self._db.log_metric('predict_log', metrics)
 
 
 class RepeatedTimer:
@@ -153,26 +156,21 @@ class DeviceLogger(RepeatedTimer):
         self._db = TrackingClient(Path(output_dir) / file_name)
 
         self._step = 0
-        self._name = prefix + '_'
+        self._prefix = prefix
+        self._name = name
         self._spec = DeviceSpecs()
 
     def run(self):
-        metrics = {}
+        metrics = {'execution_mode': self._prefix, 'name': self._name}
 
-        for k,v in self._spec.memory.items():
-            for filter_word in ['free', 'used']:
-                if filter_word in k:
-                    metrics[k] = bytesto(v, 'm')
+        for index, device in enumerate(self._spec.device_specs()):
+            metrics['gpu_{}'.format(index)] = {
+                'memory': {filter_word: device.memory[filter_word] for filter_word in ['free', 'used']},
+                'utilization': device.utilization_rates,
+                'power': device.power_usage,
+            }
 
-        for k,v in self._spec.utilization_rates.items():
-            metrics[k + '_utilization'] = v
-
-        metrics.update(self._spec.power_usage)
-
-        # Rename the metrics to have a prefix
-        metrics = {self._name + k: v for k, v in metrics.items()}
-
-        self._db.log_metrics(metrics, self._step)
+        self._db.log_metric('device_log', metrics, self._step)
         self._step += 1
 
 class HostLogger(RepeatedTimer):
@@ -180,26 +178,25 @@ class HostLogger(RepeatedTimer):
     def __init__(self, output_dir, name='', prefix='', per_device=False, *args, **kwargs):
         super(HostLogger, self).__init__(*args, **kwargs)
         self._step = 0
-        self._name = prefix + '_'
+        self._name = '_'
+        self._prefix = prefix
         self._spec = HostSpec(per_device=per_device)
 
         file_name = 'node_{}_host.json'.format(name)
         self._db = TrackingClient(Path(output_dir) / file_name)
 
     def run(self):
-        metrics = {}
-
-        metrics.update(self._spec.memory)
-        metrics.update(self._spec.cpu_percent)
-        metrics.update(self._spec.disk_io)
-        metrics.update(self._spec.net_io)
-
-        # Rename the metrics to have a prefix
-        metrics = {self._name + k: v for k, v in metrics.items()}
+        metrics = {
+                'execution_mode': self._prefix,
+                'name': self._name,
+                'cpu': {'percent', self._spec.cpu_pecent},
+                'memory': self._spec.memory,
+                'disk': self._spec.disk_io,
+                'net': self._spec.net_io
+        }
 
         # edge case to prevent logging if the session has died
-        self._db.log_metrics(metrics, self._step)
-
+        self._db.log_metric('host_log', metrics, self._step)
         self._step += 1
 
 class NodeLogger:

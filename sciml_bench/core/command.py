@@ -185,13 +185,12 @@ def cmd_list(ctx, name, data_dir):
 @click.option('--log-interval', default=0.5, help='Logging interval for system metrics')
 @click.option('--seed', default=42, type=int, help='Random seed to use for initialization')
 @click.option('--verbosity', default=2, type=int, help='Verbosity level to use. 0 is silence, 3 is maximum information')
-@click.option('--log-level', default=logging.INFO, type=int, help='Log level to use for printing to stdout')
+@click.option('--log-level', default='info', type=click.Choice(['debug', 'info', 'warning', 'error', 'critical']), help='Log level to use for printing to stdout')
 @click.option('--skip/--no-skip', default=True, help='Whether to skip or exit on encountering an exception')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
 @click.pass_context
 def run(ctx, benchmark_names, skip=True, **params):
-
-    LOGGER.setLevel(params.get('log_level'))
+    LOGGER.setLevel(params.get('log_level').upper())
     if params.get('verbosity') < 2:
         LOGGER.setLevel(logging.WARNING)
     if params.get('verbosity') == 0:
@@ -211,7 +210,7 @@ def run(ctx, benchmark_names, skip=True, **params):
     ctx.ensure_object(dict)
     ctx.obj.update(params)
 
-    if params.get('verbosity') > 2:
+    if params.get('verbosity') >= 2:
         print_header()
 
     model_dir = ctx.obj['model_dir']
@@ -264,7 +263,7 @@ def run(ctx, benchmark_names, skip=True, **params):
             LOGGER.error('Failed to run benchmark {} due to unhandled exception.\n{}'.format(name, e))
 
             if skip:
-                LOGGER.error('Skipping benchmark {}'.format(name))
+                LOGGER.info('Skipping benchmark {}'.format(name))
                 continue
             else:
                 ctx.abort()

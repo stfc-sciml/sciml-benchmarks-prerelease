@@ -51,46 +51,36 @@ class HostSpec:
     @property
     def cpu_percent(self):
         info = self._process.cpu_percent()
-        if not self._per_device:
-            info = [info]
-
-        metrics = {}
-        for i, percent in enumerate(info):
-            metrics['cpu_{}_utilization'.format(i)] = percent
-        return metrics
+        return info
 
     @property
     def cpu_info(self):
         info = cpuinfo.get_cpu_info()
         keys = ['brand', 'arch', 'vendor_id', 'hz_advertised', 'hz_actual', 'model', 'family']
-        return {'cpu_' + key: value for key, value in info.items() if key in keys}
+        return {key: value for key, value in info.items() if key in keys}
 
     @property
     def disk_io(self):
         info = self._process.io_counters()
-        if self._per_device:
-            return {'disk_' + key + '_' + k: v for key, value in info.items() for k, v in value._asdict().items()}
-        else:
-            return {'disk_' + k: v for k, v in info._asdict().items()}
+        return info._asdict()
 
     @property
     def net_io(self):
         info = psutil.net_io_counters(pernic=self._per_device)
         if self._per_device:
-            return {'net_' + key + '_' + k: v for key, value in info.items() for k, v in value._asdict().items()}
+            return {key: {k: v for k, v in value._asdict().items()} for key, value in info.items()}
         else:
-            return {'net_' + k: v for k, v in info._asdict().items()}
+            return {k: v for k, v in info._asdict().items()}
 
     @property
     def memory(self):
         memory_props = dict(psutil.virtual_memory()._asdict())
-        host_memory = dict({"memory_" + key: value for key, value in memory_props.items()})
 
         metrics = {}
-        metrics['host_memory_free'] = bytesto(host_memory['memory_free'], 'm')
-        metrics['host_memory_used'] = bytesto(host_memory['memory_used'], 'm')
-        metrics['host_memory_available'] = bytesto(host_memory['memory_available'], 'm')
-        metrics['host_memory_utilization'] = host_memory['memory_percent']
+        metrics['free'] = bytesto(memory_props['memory_free'], 'm')
+        metrics['used'] = bytesto(memory_props['memory_used'], 'm')
+        metrics['available'] = bytesto(memory_props['memory_available'], 'm')
+        metrics['utilization'] = memory_props['memory_percent']
         return metrics
 
 class DeviceSpecs:
@@ -110,6 +100,29 @@ class DeviceSpecs:
     @property
     def device_count(self):
         return self._device_count
+
+    def get_device_info(self, index):
+        spec = self.get_device_spec(index)
+
+        info = {
+            'uuid': spec.uuid,
+            'name': spec.name,
+            'brand': spec.brand,
+            'minor_number': spec.minor_number,
+            'multi_gpu_board': spec.is_multigpu_board,
+            'memory': dict(total=spec.memory['total'])
+        }
+
+        return info
+
+    def get_device_spec(self, index):
+        if index >= self._device_count:
+            raise RuntimeError('Cannot device index {} is greater than number of devices')
+
+        return self._specs[index]
+
+    def device_specs(self):
+        return self._specs
 
     @property
     def uuids(self):

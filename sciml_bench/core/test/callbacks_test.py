@@ -4,7 +4,7 @@ from itertools import chain
 
 from sciml_bench.core.tracking import TrackingClient
 from sciml_bench.core.test.helpers import fake_model_fn, FakeDataLoader
-from sciml_bench.core.callbacks import DeviceLogger, HostLogger, Callback, TimingCallback, NodeLogger
+from sciml_bench.core.callbacks import DeviceLogger, HostLogger, TrackingCallback, NodeLogger
 
 def test_DeviceLogger(mocker, tmpdir):
 
@@ -47,48 +47,44 @@ def test_NodeLogger(mocker, tmpdir):
 def test_Callback(tmpdir):
     loader = FakeDataLoader((10, 10), (1, ))
     model = fake_model_fn((10, 10))
-    model.fit(loader.train_fn(batch_size=1), callbacks=[Callback(tmpdir)])
 
-    model.fit(loader.train_fn(batch_size=1), callbacks=[Callback(tmpdir, log_batch=True)])
+    model.fit(loader.train_fn(batch_size=1), callbacks=[TrackingCallback(tmpdir, batch_size=1, log_batch=True)])
 
     db = TrackingClient(tmpdir / 'logs.json')
-    assert len(db.get_metric('loss')) == 10
+    assert len(db.get_metric('train_log')) == 1
 
-def test_TimingCallback(tmpdir):
+def test_TrackingCallback(tmpdir):
     loader = FakeDataLoader((10, 10), (1, ))
     model = fake_model_fn((10, 10))
-    hook = TimingCallback(tmpdir, batch_size=1)
+    hook = TrackingCallback(tmpdir, batch_size=1)
     model.fit(loader.train_fn(batch_size=1), callbacks=[hook])
 
     db = TrackingClient(tmpdir / 'logs.json')
-    assert len(db.get_metric('train_duration')) == 1
+    assert len(db.get_metric('train_log')) == 1
 
 
-def test_TimingCallback_predict(tmpdir):
+def test_TrackingCallback_predict(tmpdir):
     loader = FakeDataLoader((10, 10), (1, ))
     model = fake_model_fn((10, 10))
-    hook = TimingCallback(tmpdir, batch_size=1)
+    hook = TrackingCallback(tmpdir, batch_size=1)
     model.predict(loader.test_fn(batch_size=1), callbacks=[hook])
 
     db = TrackingClient(tmpdir / 'logs.json')
-    assert len(db.get_metric('test_duration')) == 1
-    assert len(db.get_metric('test_samples-per-sec')) == 1
+    assert len(db.get_metric('predict_log')) == 1
 
-def test_TimingCallback_train_with_validation(tmpdir):
+def test_TrackingCallback_train_with_validation(tmpdir):
     loader = FakeDataLoader((10, 10), (1, ))
     model = fake_model_fn((10, 10))
-    hook = TimingCallback(tmpdir, batch_size=1)
+    hook = TrackingCallback(tmpdir, batch_size=1)
     model.fit(loader.train_fn(batch_size=1), validation_data=loader.test_fn(batch_size=1), callbacks=[hook])
 
     db = TrackingClient(tmpdir / 'logs.json')
-    assert len(db.get_metric('val_duration')) == 1
-    assert len(db.get_metric('val_samples-per-sec')) == 1
-    assert len(db.get_metric('train_duration')) == 1
+    assert len(db.get_metric('test_log')) == 1
 
-def test_TimingCallback_multiple_epochs(tmpdir):
+def test_TrackingCallback_multiple_epochs(tmpdir):
     loader = FakeDataLoader((10, 10), (1, ))
     model = fake_model_fn((10, 10))
-    hook = TimingCallback(tmpdir, batch_size=1, warmup_steps=0)
+    hook = TrackingCallback(tmpdir, batch_size=1, warmup_steps=0)
     model.fit(loader.train_fn(batch_size=1), callbacks=[hook], epochs=5)
 
     # We expect 5 calls to epoch duration & train samples per sec
@@ -98,6 +94,5 @@ def test_TimingCallback_multiple_epochs(tmpdir):
     expected_calls.append('train_duration')
 
     db = TrackingClient(tmpdir / 'logs.json')
-    assert len(db.get_metric('train_epoch_duration')) == 5
-    assert len(db.get_metric('train_samples-per-sec')) == 5
-    assert len(db.get_metric('train_duration')) == 1
+    assert len(db.get_metric('epoch_log')) == 5
+    assert len(db.get_metric('train_log')) == 1

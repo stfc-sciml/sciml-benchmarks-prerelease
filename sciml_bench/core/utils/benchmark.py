@@ -4,7 +4,7 @@ from pathlib import Path
 import horovod.tensorflow.keras as hvd
 
 from sciml_bench.core.logging import LOGGER
-from sciml_bench.core.callbacks import Callback, TimingCallback
+from sciml_bench.core.callbacks import TrackingCallback
 
 
 class MultiNodeBenchmark:
@@ -30,7 +30,7 @@ class MultiNodeBenchmark:
                     experimental_run_tf_function=False)
 
     def train(self, epochs=1, lr_warmup=3, **params):
-        verbose = 1 if params.get('verbosity') > 1 and hvd.rank() == 0 else 0
+        verbose = 1 if params.get('verbosity', 0) > 1 and hvd.rank() == 0 else 0
 
         if self._model is None:
             raise RuntimeError("Model has not been built!\n \
@@ -48,12 +48,8 @@ class MultiNodeBenchmark:
         if hvd.rank() == 0:
             # These hooks only need to be called by one instance.
             # Therefore we need to only add them on rank == 0
-            mlf_callback = Callback(params['model_dir'], self._log_batch)
-            hooks.append(mlf_callback)
-
-            # Add hook for capturing Img/s and duration
-            profiler_hook = TimingCallback(params['model_dir'], params['global_batch_size'])
-            hooks.append(profiler_hook)
+            tracker_hook = TrackingCallback(params['model_dir'], params['global_batch_size'], self._log_batch)
+            hooks.append(tracker_hook)
 
         # Add hook for capturing metrics vs. epoch
         log_file = Path(params['model_dir']).joinpath('training.log')
@@ -99,17 +95,14 @@ class MultiNodeBenchmark:
         if hvd.rank() == 0:
             # These hooks only need to be called by one instance.
             # Therefore we need to only add them on rank == 0
-            mlf_callback = Callback(params['model_dir'], self._log_batch)
-            hooks.append(mlf_callback)
-
-            profiler_hook = TimingCallback(params['model_dir'], params['global_batch_size'])
-            hooks.append(profiler_hook)
+            tracker_hook = TrackingCallback(params['model_dir'], params['global_batch_size'], self._log_batch)
+            hooks.append(tracker_hook)
 
         LOGGER.info('Begin Predict...')
         LOGGER.info('Predicting for {} steps'.format(predict_steps))
 
         dataset = self._dataset.test_fn(params['batch_size'])
-        verbose = 1 if params.get('verbosity') > 1 and hvd.rank() == 0 else 0
+        verbose = 1 if params.get('verbosity', 0) > 1 and hvd.rank() == 0 else 0
 
         LOGGER.debug('Evaluate Start')
         self._model.evaluate(dataset, steps=predict_steps, callbacks=hooks, verbose=verbose)

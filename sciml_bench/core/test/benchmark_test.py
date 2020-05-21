@@ -15,14 +15,14 @@ def test_create_multi_node_benchmark(horovod):
 def test_build_multi_node_benchmark(tmpdir, horovod):
     data_loader = FakeDataLoader((10, 10, 3), (1, ))
 
-    cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir)
+    cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir, verbosity=3)
     benchmark = MultiNodeBenchmark(fake_model_fn, data_loader)
     benchmark.build(**cfg)
 
 def test_train_multi_node_benchmark(tmpdir, horovod):
     data_loader = FakeDataLoader((10, 10, 3), (1, ))
 
-    cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir, global_batch_size=10, num_replicas=1, epochs=1)
+    cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir, global_batch_size=10, num_replicas=1, epochs=1, verbosity=3)
     benchmark = MultiNodeBenchmark(fake_model_fn, data_loader)
     benchmark.build(**cfg)
     benchmark.train(**cfg)
@@ -32,7 +32,7 @@ def test_train_multi_node_benchmark(tmpdir, horovod):
 def test_predict_multi_node_benchmark(tmpdir, horovod):
     data_loader = FakeDataLoader((10, 10, 3), (1, ))
 
-    cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir, global_batch_size=10, num_replicas=1, epochs=1)
+    cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir, global_batch_size=10, num_replicas=1, epochs=1, verbosity=3)
     benchmark = MultiNodeBenchmark(fake_model_fn, data_loader)
     benchmark.build(**cfg)
     benchmark.predict(**cfg)

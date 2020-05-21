@@ -1,5 +1,20 @@
 import time
+import copy
 from tinydb import TinyDB, Query
+
+def sanitize_dict(d):
+    d = copy.deepcopy(d)
+    for k, v in d.items():
+        if type(v) is dict:
+            d[k] = sanitize_dict(v)
+        else:
+            if isinstance(v, set):
+                v = list(v)
+            else:
+                v = str(v)
+            d[k] = v
+
+    return d
 
 class TrackingClient:
 
@@ -7,45 +22,20 @@ class TrackingClient:
         self._db = TinyDB(path)
 
     def log_metric(self, key, value, step=0):
-        metric = {'name': key, 'value': str(value), 'step': step, 'timestamp': time.time(), 'type': 'metric'}
+        metric = {'name': key, 'value': value, 'step': step, 'timestamp': time.time(), 'type': 'metric'}
+
+        metric = sanitize_dict(metric)
         self._db.insert(metric)
 
-    def log_metrics(self, data, step):
-
-        metrics = []
-        for key, value in data.items():
-            metric = {'name': key, 'value': str(value), 'step': step, 'timestamp': time.time(), 'type': 'metric'}
-            metrics.append(metric)
-
-        self._db.insert_multiple(metrics)
-
     def log_tag(self, key, value):
-        tag = {'name': key, 'value': str(value), 'type': 'tag'}
+        tag = {'name': key, 'value': value, 'type': 'tag'}
+        tag = sanitize_dict(tag)
         self._db.insert(tag)
 
-    def log_tags(self, data):
-        tags = []
-        for key, value in data.items():
-            tag = {'name': key, 'value': str(value), 'timestamp': time.time(), 'type': 'tag'}
-            tags.append(tag)
-
-        self._db.insert_multiple(tags)
-
     def log_param(self, key, value):
-        param = {'name': key, 'value': str(value), 'type': 'param'}
+        param = {'name': key, 'value': value, 'type': 'param'}
+        param = sanitize_dict(param)
         self._db.insert(param)
-
-    def log_params(self, data):
-        params = []
-        for key, value in data.items():
-            param = {'name': key, 'value': str(value), 'timestamp': time.time(), 'type': 'param'}
-            params.append(param)
-
-        self._db.insert_multiple(params)
-
-    def log_artifact(self, path):
-        artifact = {'value': str(path), 'type': 'artifact'}
-        self._db.insert(artifact)
 
     def get_metric(self, name):
         query = Query()

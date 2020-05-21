@@ -26,13 +26,17 @@ class MultiNodeBenchmarkRunner:
             file_name = 'node_{}_host.json'.format(self._node_name)
             db = TrackingClient(Path(self._output_dir) / file_name)
 
-            db.log_tag('host_name', host_spec.name)
-            db.log_tag('host_node_name', host_spec.node_name)
-            db.log_tag('host_ip', host_spec.node_name)
-            db.log_tag('host_num_cores', host_spec.num_cores)
-            db.log_tag('host_release', host_spec.release)
-            db.log_tag('host_system', host_spec.system)
-            db.log_tags(host_spec.cpu_info)
+            host_info = {
+                'name': host_spec.name,
+                'node_name': host_spec.node_name,
+                'ip': host_spec.node_name,
+                'num_cores': host_spec.num_cores,
+                'release': host_spec.release,
+                'system': host_spec.system,
+                'cpu_info': host_spec.cpu_info,
+            }
+
+            db.log_tag('host_info', host_info)
 
             # Log device information
             device_specs = DeviceSpecs()
@@ -40,12 +44,11 @@ class MultiNodeBenchmarkRunner:
             file_name = 'node_{}_devices.json'.format(self._node_name)
             db = TrackingClient(Path(self._output_dir) / file_name)
 
-            db.log_tag('gpu_count', device_specs.device_count)
-            db.log_tags(device_specs.names)
-            db.log_tags(device_specs.brands)
-            db.log_tags(device_specs.uuids)
-            db.log_tags({k: v for k, v in device_specs.memory.items() if 'total' in k})
-            db.log_tags(device_specs.is_multigpu_board)
+            device_info = {}
+            device_info['gpu_count'] = device_specs.device_count
+            device_info.update({'gpu_{}'.format(i): device_specs.get_device_info(i) for i in range(device_specs.device_count)})
+
+            db.log_tag('device_info', device_info)
 
     def setup(self, **params):
         # Horovod: pin GPU to be used to process local rank (one GPU per process)
@@ -54,8 +57,8 @@ class MultiNodeBenchmarkRunner:
         for gpu in gpus:
             try:
                 tf.config.experimental.set_memory_growth(gpu, True)
-            except RuntimeError:
-                raise RuntimeWarning("Cannot set GPU memory growth == True")
+            except:
+                LOGGER.warning('Could not set GPU memory growth == True')
 
         if gpus:
             tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], 'GPU')
@@ -73,7 +76,7 @@ class MultiNodeBenchmarkRunner:
 
         if hvd.rank() == 0:
             db = TrackingClient(Path(self._output_dir) / 'logs.json')
-            db.log_params(params)
+            db.log_param('params', params)
 
         LOGGER.info('Number of Replicas: {}'.format(params['num_replicas']))
         LOGGER.info('Global Batch Size: {}'.format(params['global_batch_size']))

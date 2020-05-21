@@ -9,13 +9,11 @@ from sciml_bench.core.utils.runner import MultiNodeBenchmarkRunner
 def horovod():
     hvd.init()
 
-@pytest.mark.forked
 def test_run_benchmark_runner_multi(tmpdir, horovod):
-    tf.keras.backend.clear_session()
     data_loader = FakeDataLoader((10, 10, 3), (1, ))
     benchmark = MultiNodeBenchmark(fake_model_fn, data_loader)
 
     cfg = dict(batch_size=10, lr_warmup=3, model_dir=tmpdir,
-            exec_mode='train_and_predict', epochs=1)
+            exec_mode='train_and_predict', epochs=1, verbosity=3)
     MultiNodeBenchmarkRunner(tmpdir, benchmark).run(**cfg)
 

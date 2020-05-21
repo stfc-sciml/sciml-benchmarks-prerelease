@@ -4,7 +4,7 @@ import psutil
 from sciml_bench.core.system import HostSpec, DeviceSpec, DeviceSpecs
 
 def test_host_spec():
-    spec = HostSpec()
+    spec = HostSpec(per_device=True)
 
     assert isinstance(spec.disk_io, dict)
     assert isinstance(spec.net_io, dict)
