@@ -78,6 +78,10 @@ def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
     # Try and import tensorflow to check for any issues
     try:
         import tensorflow as tf
+        devices = tf.config.list_physical_devices('GPU')
+        if len(devices) == 0 and not cpu_only:
+            LOGGER.warning('No available GPUs could be detected. This could be because no GPU exists or could be due to a mismatch between CUDA runtime version and the compute capability of the system hardware. Check that the CUDA drivers are correctly installted on your system. Set verbosity = 3 and check the output of the Tensorflow logs.')
+        #     sys.exit(1)
     except Exception as e:
         LOGGER.debug(traceback.format_exc())
         LOGGER.critical('Fatal issue importing Tensorflow: %s', e)
@@ -189,7 +193,9 @@ def run(ctx, benchmark_names, skip=True, **params):
 
     LOGGER.setLevel(params.get('log_level'))
     if params.get('verbosity') < 2:
-        LOGGER.setLevel(logging.ERROR)
+        LOGGER.setLevel(logging.WARNING)
+    if params.get('verbosity') == 0:
+        LOGGER.setLevel(logging.CRITICAL)
 
     set_environment_variables(**params)
 
