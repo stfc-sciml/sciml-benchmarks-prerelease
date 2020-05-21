@@ -17,3 +17,4 @@ pytest-mock
 horovod
 mpi4py
 bokeh
+tinydb
