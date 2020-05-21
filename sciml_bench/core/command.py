@@ -163,7 +163,7 @@ BENCHMARK_DICT = {b.name: b for b in BENCHMARKS}
 @click.option('--log-batch', default=False, is_flag=True, help='Whether to log metrics by batch or by epoch')
 @click.option('--log-interval', default=0.5, help='Logging interval for system metrics')
 @click.option('--seed', default=42, type=int, help='Random seed to use for initialization')
-@click.option('--verbosity', default=2, type=int, help='Verbosity level to use. 0 is silence, 3 is maximum information')
+@click.option('--verbosity', default=3, type=int, help='Verbosity level to use. 0 is silence, 3 is maximum information')
 @click.option('--log-level', default=logging.INFO, type=int, help='Log level to use for printing to stdout')
 @click.option('--skip', default=True, type=bool, help='Whether to skip or exit on encountering an exception')
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
