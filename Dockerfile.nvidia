@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/tensorflow:20.01-tf2-py3
+FROM nvcr.io/nvidia/tensorflow:20.03-tf2-py3
 
 RUN apt-get update
 
@@ -10,10 +10,9 @@ WORKDIR /workspace/
 
 RUN pip install -e . 
 
-EXPOSE 5000
 ENV SCIML_BENCH_DATA_DIR /data
 ENV SCIML_BENCH_MODEL_DIR /sciml-bench-out
 
 RUN mkdir $SCIML_BENCH_MODEL_DIR
 
-CMD sciml-bench all
+CMD sciml-bench run all

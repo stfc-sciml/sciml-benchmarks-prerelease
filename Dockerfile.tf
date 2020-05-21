@@ -63,4 +63,4 @@ ENV SCIML_BENCH_MODEL_DIR /sciml-bench-out
 
 RUN mkdir $SCIML_BENCH_MODEL_DIR
 
-CMD sciml-bench all
+CMD sciml-bench run all
