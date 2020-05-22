@@ -70,8 +70,8 @@ class TrackingCallback(tf.keras.callbacks.Callback):
             return
 
         metrics = {
-            'duration', time.time() - self._epoch_begin_time,
-            'samples_per_sec', self._train_meter.get_value()
+                'duration': time.time() - self._epoch_begin_time,
+                'samples_per_sec': self._train_meter.get_value()
         }
         metrics.update(logs)
         self._db.log_metric('epoch_log', metrics, step=epoch)
@@ -81,7 +81,8 @@ class TrackingCallback(tf.keras.callbacks.Callback):
 
     def on_train_end(self, logs=None):
         metrics = {
-            'duration', time.time() - self._train_begin_time
+                'duration': time.time() - self._train_begin_time,
+                'samples_per_sec': self._train_meter.get_value()
         }
         metrics.update(logs)
         self._db.log_metric('train_log', metrics)
@@ -91,8 +92,8 @@ class TrackingCallback(tf.keras.callbacks.Callback):
 
     def on_test_end(self,logs=None):
         metrics = {
-            'duration', time.time() - self._test_begin_time,
-            'samples_per_sec', self._test_meter.get_value()
+                'duration': time.time() - self._test_begin_time,
+                'samples_per_sec': self._test_meter.get_value()
         }
         metrics.update(logs)
         self._db.log_metric('test_log', metrics)
@@ -102,8 +103,8 @@ class TrackingCallback(tf.keras.callbacks.Callback):
 
     def on_predict_end(self, logs=None):
         metrics = {
-            'duration', time.time() - self._predict_begin_time,
-            'samples_per_sec', self._predict_meter.get_value()
+                'duration': time.time() - self._predict_begin_time,
+                'samples_per_sec': self._predict_meter.get_value()
         }
         metrics.update(logs)
         self._db.log_metric('predict_log', metrics)
@@ -152,13 +153,13 @@ class DeviceLogger(RepeatedTimer):
     def __init__(self, output_dir, name='',  prefix='', *args, **kwargs):
         super(DeviceLogger, self).__init__(*args, **kwargs)
 
-        file_name = 'node_{}_devices.json'.format(name)
-        self._db = TrackingClient(Path(output_dir) / file_name)
-
         self._step = 0
         self._prefix = prefix
         self._name = name
         self._spec = DeviceSpecs()
+
+        file_name = name + '_' + 'devices.json' if name != '' else 'devices.json'
+        self._db = TrackingClient(Path(output_dir) / file_name)
 
     def run(self):
         metrics = {'execution_mode': self._prefix, 'name': self._name}
@@ -178,18 +179,18 @@ class HostLogger(RepeatedTimer):
     def __init__(self, output_dir, name='', prefix='', per_device=False, *args, **kwargs):
         super(HostLogger, self).__init__(*args, **kwargs)
         self._step = 0
-        self._name = '_'
+        self._name = name
         self._prefix = prefix
         self._spec = HostSpec(per_device=per_device)
 
-        file_name = 'node_{}_host.json'.format(name)
+        file_name = name + '_' + 'host.json' if name != '' else 'host.json'
         self._db = TrackingClient(Path(output_dir) / file_name)
 
     def run(self):
         metrics = {
                 'execution_mode': self._prefix,
                 'name': self._name,
-                'cpu': {'percent', self._spec.cpu_pecent},
+                'cpu': {'percent': self._spec.cpu_percent},
                 'memory': self._spec.memory,
                 'disk': self._spec.disk_io,
                 'net': self._spec.net_io

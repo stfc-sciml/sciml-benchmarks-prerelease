@@ -77,10 +77,10 @@ class HostSpec:
         memory_props = dict(psutil.virtual_memory()._asdict())
 
         metrics = {}
-        metrics['free'] = bytesto(memory_props['memory_free'], 'm')
-        metrics['used'] = bytesto(memory_props['memory_used'], 'm')
-        metrics['available'] = bytesto(memory_props['memory_available'], 'm')
-        metrics['utilization'] = memory_props['memory_percent']
+        metrics['free'] = bytesto(memory_props['free'], 'm')
+        metrics['used'] = bytesto(memory_props['used'], 'm')
+        metrics['available'] = bytesto(memory_props['available'], 'm')
+        metrics['utilization'] = memory_props['percent']
         return metrics
 
 class DeviceSpecs:

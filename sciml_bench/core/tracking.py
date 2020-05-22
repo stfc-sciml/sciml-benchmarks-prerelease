@@ -1,20 +1,23 @@
 import time
 import copy
+import numpy as np
 from tinydb import TinyDB, Query
+
 
 def sanitize_dict(d):
     d = copy.deepcopy(d)
     for k, v in d.items():
         if type(v) is dict:
-            d[k] = sanitize_dict(v)
+            v = sanitize_dict(v)
+        elif isinstance(v, np.floating):
+            v = float(v)
+        elif isinstance(v, set):
+            v = list(v)
         else:
-            if isinstance(v, set):
-                v = list(v)
-            else:
-                v = str(v)
-            d[k] = v
-
+            v = str(v)
+        d[k] = v
     return d
+
 
 class TrackingClient:
 
@@ -22,19 +25,20 @@ class TrackingClient:
         self._db = TinyDB(path)
 
     def log_metric(self, key, value, step=0):
-        metric = {'name': key, 'value': value, 'step': step, 'timestamp': time.time(), 'type': 'metric'}
+        value = sanitize_dict(value)
+        metric = {'name': key, 'data': value, 'step': step,
+                  'timestamp': time.time(), 'type': 'metric'}
 
-        metric = sanitize_dict(metric)
         self._db.insert(metric)
 
     def log_tag(self, key, value):
-        tag = {'name': key, 'value': value, 'type': 'tag'}
-        tag = sanitize_dict(tag)
+        value = sanitize_dict(value)
+        tag = {'name': key, 'data': value, 'type': 'tag'}
         self._db.insert(tag)
 
     def log_param(self, key, value):
-        param = {'name': key, 'value': value, 'type': 'param'}
-        param = sanitize_dict(param)
+        value = sanitize_dict(value)
+        param = {'name': key, 'data': value, 'type': 'param'}
         self._db.insert(param)
 
     def get_metric(self, name):

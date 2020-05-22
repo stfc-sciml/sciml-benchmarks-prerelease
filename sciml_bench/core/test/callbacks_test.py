@@ -10,25 +10,58 @@ def test_DeviceLogger(mocker, tmpdir):
 
     logger = DeviceLogger(tmpdir, interval=0.1)
 
-    run_stub = mocker.spy(logger, 'run')
-
     logger.start()
     time.sleep(1)
     logger.stop()
 
-    run_stub.assert_called()
+    assert (tmpdir / 'devices.json').exists()
+
+    db = TrackingClient(tmpdir / 'devices.json')
+    logs = db.get_metric('device_log')
+    assert len(logs) > 1
+
+    if logs[0] == {}:
+        return
+
+    for log in logs:
+        log = log['data']
+        gpu = log['gpu_0']
+        assert 'execution_mode' in log
+        assert 'name' in log
+        assert 'utilization' in gpu
+        assert 'power' in gpu
+        assert 'memory' in gpu
+        assert 'free' in gpu['memory']
+        assert 'used' in gpu['memory']
 
 def test_HostLogger(mocker, tmpdir):
 
     logger = HostLogger(tmpdir, interval=0.1)
 
-    run_stub = mocker.spy(logger, 'run')
-
     logger.start()
     time.sleep(1)
     logger.stop()
 
-    run_stub.assert_called()
+    assert (tmpdir / 'host.json').exists()
+
+    db = TrackingClient(tmpdir / 'host.json')
+    logs = db.get_metric('host_log')
+    assert len(logs) > 1
+
+    for log in logs:
+        log = log['data']
+        assert 'execution_mode' in log
+        assert 'name' in log
+        assert 'cpu' in log
+        assert 'percent' in log['cpu']
+        assert 'memory' in log
+        assert 'free' in log['memory']
+        assert 'used' in log['memory']
+        assert 'available' in log['memory']
+        assert 'utilization' in log['memory']
+        assert 'disk' in log
+        assert 'net' in log
+
 
 def test_NodeLogger(mocker, tmpdir):
     hvd.init()
@@ -96,3 +129,17 @@ def test_TrackingCallback_multiple_epochs(tmpdir):
     db = TrackingClient(tmpdir / 'logs.json')
     assert len(db.get_metric('epoch_log')) == 5
     assert len(db.get_metric('train_log')) == 1
+
+    epoch_logs = db.get_metric('epoch_log')
+    assert isinstance(epoch_logs, list)
+
+    for log in epoch_logs:
+        log = log['data']
+        assert 'duration' in log
+        assert 'loss' in log
+        assert 'samples_per_sec' in log
+
+    train_log = db.get_metric('train_log')[0]
+    log = train_log['data']
+    assert 'duration' in log
+    assert 'samples_per_sec' in log
