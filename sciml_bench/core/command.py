@@ -72,7 +72,7 @@ def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
     if use_amp:
         os.environ['TF_ENABLE_AUTO_MIXED_PRECISION'] = '1'
 
-    if kwargs['verbosity'] >= 3:
+    if kwargs['verbosity'] >= 3 and kwargs['log_level'] == 'debug':
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = '-1'
 
     # Try and import tensorflow to check for any issues
@@ -319,9 +319,6 @@ def download(*args, **kwargs):
 @click.option('--model-dir', default='sciml-bench-out', type=str, help='Output directory for model results', envvar='SCIML_BENCH_MODEL_DIR')
 @click.pass_context
 def report(ctx, model_dir, **kwargs):
-    kwargs.update(ctx.obj)
-    model_dir = kwargs.get('model_dir')
-
     for benchmark in BENCHMARKS:
         benchmark_folder = Path(model_dir) / benchmark.name.replace('-', '_')
         if not benchmark_folder.exists():
