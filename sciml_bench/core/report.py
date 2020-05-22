@@ -1,4 +1,5 @@
 
+import collections
 from collections import defaultdict
 from bokeh.plotting import figure, output_file, show
 from bokeh.layouts import column, layout
@@ -7,20 +8,36 @@ from bokeh.models import ColumnDataSource, DataTable, TableColumn
 
 from sciml_bench.core.tracking import TrackingClient
 
+
+def flatten(d, parent_key='', sep='_'):
+    items = []
+    for k, v in d.items():
+        new_key = parent_key + sep + k if parent_key else k
+        if isinstance(v, collections.MutableMapping):
+            items.extend(flatten(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
 def create_metrics_explorer(client):
     metrics = client.get_metrics()
-    names = list({m['name'] for m in metrics})
 
-    metrics = {}
-    single_metrics = {}
-    for name in names:
-        metric = client.get_metric(name)
-        steps = [m['step'] for m in metric]
-        values = [float(m['value']) for m in metric]
-        if len(values) <= 1:
-            single_metrics[name] = values[0]
-        else:
-            metrics[name] = dict(steps=steps, values=values)
+    all_metrics = defaultdict(list)
+    for metric in metrics:
+        key = metric['name'].replace('_log', '')
+        flat_metric = flatten(metric['data'])
+
+        exec_mode = flat_metric.pop('execution_mode', '')
+        exec_mode = exec_mode + '_' if exec_mode != '' else exec_mode
+        flat_metric.pop('name', None)
+
+        flat_metric = {exec_mode + key + '_' + k: v for k, v in flat_metric.items()}
+        for k, v in flat_metric.items():
+            all_metrics[k].append(v)
+
+    metrics = {k: dict(values=v, steps=list(range(len(v)))) for k, v in all_metrics.items() if len(v) > 1}
+    single_metrics = {k:v for k, v in all_metrics.items() if len(v) == 1}
 
     selection_names = sorted(list(metrics.keys()))
     current_source = ColumnDataSource(metrics[selection_names[0]])
@@ -54,9 +71,18 @@ def create_metrics_explorer(client):
         return column(select, p)
 
 def create_table(data):
+    names = []
+    values = []
+    data = flatten(data)
 
-    names = [p['name'] for p in data]
-    values = [p['value'] for p in data]
+    exec_mode = data.pop('execution_mode', '')
+    exec_mode = exec_mode + '_' if exec_mode != '' else exec_mode
+    data.pop('name', None)
+
+    for key, value in data.items():
+        names.append(exec_mode + key)
+        values.append(value)
+
 
     data = dict(
 	    names=names,
@@ -75,7 +101,8 @@ def create_table(data):
 
 def create_report(folder):
     client = TrackingClient(folder / 'logs.json')
-    params = client.get_params()
+    params = client.get_params()[0]
+    params = params['data']
     # output to static HTML file
     output_file(folder / "report.html")
 
@@ -96,14 +123,13 @@ def create_report(folder):
     metric_explorer = create_metrics_explorer(client)
     widgets.append(metric_explorer)
 
+    host_files = list(folder.glob('*_host.json'))
+    host_logs = {f.name.split('_')[0]: f for f in host_files}
 
-    host_files = list(folder.glob('node_*_host.json'))
-    host_logs = {f.name.split('_')[1]: f for f in host_files}
+    device_files = list(folder.glob('*_devices.json'))
+    device_logs = {f.name.split('_')[0]: f for f in device_files}
 
-    device_files = list(folder.glob('node_*_devices.json'))
-    device_logs = {f.name.split('_')[1]: f for f in device_files}
-
-    node_names = [f.name.split('_')[1] for f in host_files]
+    node_names = [f.name.split('_')[0] for f in host_files]
 
     node_logs = defaultdict(dict)
     for key in node_names:
@@ -113,9 +139,9 @@ def create_report(folder):
     for node_name, logs in node_logs.items():
         widgets.append(Div(text="<h2>{} Host</h2>".format(node_name)))
         client = TrackingClient(logs['host'])
-        tags = client.get_tags()
+        tags = client.get_tags()[0]
 
-        tags_table = create_table(tags)
+        tags_table = create_table(tags['data'])
         widgets.append(tags_table)
 
         host_explorer = create_metrics_explorer(client)
@@ -124,9 +150,9 @@ def create_report(folder):
         widgets.append(Div(text="<h2>{} Devices</h2>".format(node_name)))
 
         client = TrackingClient(logs['devices'])
-        tags = client.get_tags()
+        tags = client.get_tags()[0]
 
-        tags_table = create_table(tags)
+        tags_table = create_table(tags['data'])
         widgets.append(tags_table)
 
         devices_explorer = create_metrics_explorer(client)
