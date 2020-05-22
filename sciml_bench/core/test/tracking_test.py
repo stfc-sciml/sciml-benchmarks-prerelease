@@ -6,14 +6,14 @@ def test_create_benchmark(tmpdir):
 
     name = 'my-benchmark.json'
     client = TrackingClient(tmpdir / name)
-    client.log_metric('loss', 1, step=1)
-    client.log_metric('loss', 1, step=2)
+    client.log_metric('log', {'loss': 1}, step=1)
+    client.log_metric('log', {'loss': 1}, step=2)
 
     path = Path(tmpdir / name).with_suffix('.json')
     assert path.exists()
 
     with TinyDB(path) as db:
-        assert db.count(Query().name == 'loss') == 2
+        assert db.count(Query().name == 'log') == 2
 
 def test_log_metric(tmpdir):
     name = 'my-benchmark.json'
