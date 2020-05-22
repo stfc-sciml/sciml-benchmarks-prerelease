@@ -23,7 +23,7 @@ class MultiNodeBenchmarkRunner:
         if hvd.local_rank() == 0:
 
             # Log host information
-            file_name = 'node_{}_host.json'.format(self._node_name)
+            file_name = '{}_host.json'.format(self._node_name)
             db = TrackingClient(Path(self._output_dir) / file_name)
 
             host_info = {
@@ -41,7 +41,7 @@ class MultiNodeBenchmarkRunner:
             # Log device information
             device_specs = DeviceSpecs()
 
-            file_name = 'node_{}_devices.json'.format(self._node_name)
+            file_name = '{}_devices.json'.format(self._node_name)
             db = TrackingClient(Path(self._output_dir) / file_name)
 
             device_info = {}
