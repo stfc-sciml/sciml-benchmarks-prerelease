@@ -74,6 +74,7 @@ class SLSTRDataLoader(DataLoader):
         bt_nan_mask = tf.math.is_finite(bts)
         fill_value = tf.math.reduce_min(tf.boolean_mask(bts, bt_nan_mask))
         bts = tf.where(bt_nan_mask, bts, fill_value)
+        bts = tf.cast(bts, tf.float32)
 
         # Mean - Std norm
         bts = (bts - 270.0) / 22.0
@@ -123,7 +124,7 @@ class SLSTRDataLoader(DataLoader):
         dataset = tf.data.Dataset.from_tensor_slices(self._train_images)
         dataset = dataset.shard(hvd.size(), hvd.rank())
         dataset = dataset.shuffle(500)
-        dataset = dataset.interleave(self._generator, cycle_length=16, num_parallel_calls=16)
+        dataset = dataset.interleave(self._generator, cycle_length=16, num_parallel_calls=None)
         dataset = dataset.unbatch()
         dataset = dataset.shuffle(batch_size * 3)
         dataset = dataset.prefetch(batch_size * 3)
@@ -133,7 +134,7 @@ class SLSTRDataLoader(DataLoader):
     def test_fn(self, batch_size=8):
         dataset = tf.data.Dataset.from_tensor_slices(self._test_images)
         dataset = dataset.shard(hvd.size(), hvd.rank())
-        dataset = dataset.interleave(self._generator, cycle_length=16, num_parallel_calls=16)
+        dataset = dataset.interleave(self._generator, cycle_length=16, num_parallel_calls=None)
         dataset = dataset.unbatch()
         dataset = dataset.batch(batch_size)
         dataset = dataset.prefetch(batch_size)

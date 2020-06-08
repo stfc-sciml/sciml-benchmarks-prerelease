@@ -110,43 +110,24 @@ class TrackingCallback(tf.keras.callbacks.Callback):
         self._db.log_metric('predict_log', metrics)
 
 
-class RepeatedTimer:
-    __metaclass__ = ABCMeta
+class RepeatedTimer(Timer):
 
     def __init__(self, interval, *args, **kwargs):
-        self._timer     = None
+        super(RepeatedTimer, self).__init__(interval, self.run)
         self.interval   = interval
         self.args       = args
         self.kwargs     = kwargs
-        self.is_running = False
+        self.daemon = True
 
-    @abstractmethod
     def run(self):
-        pass
-
-    def _run(self):
-        self.is_running = False
-        self.start()
-        self.run(*self.args, **self.kwargs)
-
-    def start(self):
-        if not self.is_running:
-            self._timer = Timer(self.interval, self._run)
-            # Important! Must be registered as daemon to properly exit
-            # if killed by external process
-            self._timer.daemon = True
-            self._timer.start()
-            self.is_running = True
-
-    def stop(self):
-        self._timer.cancel()
-        self.is_running = False
+        while not self.finished.wait(self.interval):
+            self._run(*self.args, **self.kwargs)
 
     def __enter__(self):
         self.start()
 
     def __exit__(self ,type, value, traceback):
-        self.stop()
+        self.cancel()
 
 class DeviceLogger(RepeatedTimer):
 
@@ -161,7 +142,7 @@ class DeviceLogger(RepeatedTimer):
         file_name = name + '_' + 'devices.json' if name != '' else 'devices.json'
         self._db = TrackingClient(Path(output_dir) / file_name)
 
-    def run(self):
+    def _run(self):
         metrics = {'execution_mode': self._prefix, 'name': self._name}
 
         for index, device in enumerate(self._spec.device_specs()):
@@ -186,7 +167,7 @@ class HostLogger(RepeatedTimer):
         file_name = name + '_' + 'host.json' if name != '' else 'host.json'
         self._db = TrackingClient(Path(output_dir) / file_name)
 
-    def run(self):
+    def _run(self):
         metrics = {
                 'execution_mode': self._prefix,
                 'name': self._name,
@@ -222,5 +203,5 @@ class NodeLogger:
 
     def __exit__(self ,type, value, traceback):
         if self.has_loggers():
-            self._host_logger.stop()
-            self._device_logger.stop()
+            self._host_logger.cancel()
+            self._device_logger.cancel()

@@ -12,7 +12,7 @@ def test_DeviceLogger(mocker, tmpdir):
 
     logger.start()
     time.sleep(1)
-    logger.stop()
+    logger.cancel()
 
     assert (tmpdir / 'devices.json').exists()
 
@@ -40,7 +40,7 @@ def test_HostLogger(mocker, tmpdir):
 
     logger.start()
     time.sleep(1)
-    logger.stop()
+    logger.cancel()
 
     assert (tmpdir / 'host.json').exists()
 
