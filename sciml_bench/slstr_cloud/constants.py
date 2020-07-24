@@ -4,5 +4,5 @@ PATCH_SIZE = 512
 IMAGE_H = 1200
 # Original width of the image
 IMAGE_W = 1500
-# No. patches per image
-PATCHES_PER_IMAGE = (1024 / 512) *2
+# No. of channels in final image
+N_CHANNELS = 9

@@ -7,6 +7,7 @@ import horovod.tensorflow as hvd
 from sciml_bench.core.data_loader import DataLoader
 from sciml_bench.em_denoise.constants import IMG_SIZE
 
+
 class EMGrapheneDataset(DataLoader):
 
     def __init__(self, data_dir, seed=None):

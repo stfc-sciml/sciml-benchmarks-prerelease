@@ -1,5 +1,6 @@
 from abc import abstractmethod, ABCMeta
 
+
 class DataLoader():
     """Base class for data loaders
 
@@ -9,23 +10,14 @@ class DataLoader():
 
     @property
     @abstractmethod
-    def dimensions(self):
+    def input_size(self):
         pass
 
     @property
     @abstractmethod
-    def train_size(self):
-        pass
-
-    @property
-    @abstractmethod
-    def test_size(self):
+    def output_size(self):
         pass
 
     @abstractmethod
-    def train_fn(self):
-        pass
-
-    @abstractmethod
-    def test_fn(self):
+    def to_dataset(self):
         pass
