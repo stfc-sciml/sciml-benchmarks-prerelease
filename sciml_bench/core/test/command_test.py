@@ -3,8 +3,9 @@ from pathlib import Path
 from click.testing import CliRunner
 from sciml_bench.core.command import cli, BENCHMARK_DICT
 
+
 def test_command_run_single_benchmark(tmpdir, mocker):
-    mocker.patch('sciml_bench.core.command._run_benchmark')
+    mocker.patch('sciml_bench.core.runner.run_benchmark')
     runner = CliRunner()
     with runner.isolated_filesystem():
         model_dir = str(tmpdir)
@@ -18,8 +19,9 @@ def test_command_run_single_benchmark(tmpdir, mocker):
         result = runner.invoke(cli, ['run', '--data-dir',  data_dir, '--model-dir', model_dir, 'em-denoise'])
         assert result.exit_code == 0
 
+
 def test_command_run_single_benchmark_set_verbosity(tmpdir, mocker, caplog):
-    mocker.patch('sciml_bench.core.command._run_benchmark')
+    mocker.patch('sciml_bench.core.runner.run_benchmark')
     runner = CliRunner()
     with runner.isolated_filesystem():
         model_dir = str(tmpdir)
@@ -61,7 +63,7 @@ def test_command_run_single_benchmark_set_verbosity(tmpdir, mocker, caplog):
 
 
 def test_command_run_single_benchmark_set_environment(tmpdir, mocker, caplog):
-    mocker.patch('sciml_bench.core.command._run_benchmark')
+    mocker.patch('sciml_bench.core.runner.run_benchmark')
     runner = CliRunner()
     with runner.isolated_filesystem():
         model_dir = str(tmpdir)
@@ -82,7 +84,7 @@ def test_command_run_single_benchmark_set_environment(tmpdir, mocker, caplog):
         assert os.environ['CUDA_VISIBLE_DEVICES'] == '-1'
 
 def test_command_run_single_benchmark_fails_invalid_data_dir(tmpdir, mocker, caplog):
-    mocker.patch('sciml_bench.core.command._run_benchmark')
+    mocker.patch('sciml_bench.core.runner.run_benchmark')
     runner = CliRunner()
     with runner.isolated_filesystem():
         model_dir = str(tmpdir)
@@ -99,7 +101,7 @@ def test_command_run_single_benchmark_fails_invalid_data_dir(tmpdir, mocker, cap
 
 
 def test_command_run_single_benchmark_fails_invalid_benchmark_name(tmpdir, mocker):
-    mocker.patch('sciml_bench.core.command._run_benchmark')
+    mocker.patch('sciml_bench.core.runner.run_benchmark')
     runner = CliRunner()
     with runner.isolated_filesystem():
         model_dir = str(tmpdir)
@@ -117,7 +119,7 @@ def test_command_run_single_benchmark_fails_invalid_benchmark_name(tmpdir, mocke
 
 
 def test_command_run_single_benchmark_skips_invalid_data_dir_for_specific_benchmark(tmpdir, mocker, caplog):
-    mocker.patch('sciml_bench.core.command._run_benchmark')
+    mocker.patch('sciml_bench.core.runner.run_benchmark')
     runner = CliRunner()
     with runner.isolated_filesystem():
         model_dir = str(tmpdir)
@@ -136,7 +138,7 @@ def test_command_run_single_benchmark_skips_invalid_data_dir_for_specific_benchm
 
 
 def test_command_run_single_benchmark_fails_invalid_data_dir_for_specific_benchmark(tmpdir, mocker, caplog):
-    mocker.patch('sciml_bench.core.command._run_benchmark')
+    mocker.patch('sciml_bench.core.runner.run_benchmark')
     runner = CliRunner()
     with runner.isolated_filesystem():
         model_dir = str(tmpdir)
@@ -155,7 +157,7 @@ def test_command_run_single_benchmark_fails_invalid_data_dir_for_specific_benchm
 
 
 def test_command_run_all_benchmarks(tmpdir, mocker, caplog):
-    mocker.patch('sciml_bench.core.command._run_benchmark')
+    mocker.patch('sciml_bench.core.runner.run_benchmark')
     runner = CliRunner()
     with runner.isolated_filesystem():
         model_dir = str(tmpdir / 'models')

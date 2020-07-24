@@ -5,17 +5,20 @@ import logging
 import sys
 import yaml
 import click
-import click_config_file
-from datetime import datetime
 from pathlib import Path
 
 import sciml_bench
 from sciml_bench.core.report import create_report
 from sciml_bench.core.logging import LOGGER
 from sciml_bench.core.download import download_datasets
+from sciml_bench.core.runner import run_benchmark
+from sciml_bench.benchmarks import BENCHMARKS
+
+# Dict of all benchmark names -> benchmark functions
+BENCHMARK_DICT = {b.name: b for b in BENCHMARKS}
 
 
-def yaml_provider(file_path, cmd_name):
+def load_yaml(file_path):
     with open(file_path) as config_data:
         cfg = yaml.load(config_data, yaml.SafeLoader)
         return cfg
@@ -96,69 +99,6 @@ def cli(ctx, tracking_uri=None, **kwargs):
     pass
 
 
-@cli.command(help='Run the DMS Classifier Benchmark', hidden=True)
-@click_config_file.configuration_option(provider=yaml_provider, implicit=False)
-@click.pass_context
-@click.option('--epochs', default=10, help='Set number of epochs')
-@click.option('--loss', default='binary_crossentropy', help='Set loss function to use')
-@click.option('--batch-size', default=256, help='Set the batch size for training & test')
-@click.option('--learning-rate', default=1e-4, help='Set the learning rate')
-@click.option('--metrics', '-m', default=['accuracy'], multiple=True, help='Set the metrics to output')
-def dms_classifier(ctx, **kwargs):
-    import sciml_bench.dms_classifier.main as dms_classifier_mod
-    _run_benchmark(dms_classifier_mod, ctx, **kwargs)
-
-
-@cli.command(help='Run the Electron Microscopy Denoise Benchmark', hidden=True)
-@click_config_file.configuration_option(provider=yaml_provider, implicit=False)
-@click.pass_context
-@click.option('--epochs', default=1, help='Set number of epochs')
-@click.option('--loss', default='mse', help='Set loss function to use')
-@click.option('--batch-size', default=256, help='Set the batch size for training & test')
-@click.option('--learning-rate', default=0.01, help='Set the learning rate')
-@click.option('--metrics', '-m', default=[], multiple=True, help='Set the metrics to output')
-def em_denoise(ctx, **kwargs):
-    import sciml_bench.em_denoise.main as em_denoise_mod
-    _run_benchmark(em_denoise_mod, ctx, **kwargs)
-
-
-@cli.command(help='Run the SLSTR Cloud Segmentation Benchmark', hidden=True)
-@click_config_file.configuration_option(provider=yaml_provider, implicit=False)
-@click.pass_context
-@click.option('--epochs', default=30, help='Set number of epochs')
-@click.option('--loss', default='binary_crossentropy', help='Set loss function to use')
-@click.option('--batch-size', default=6, help='Set the batch size for training & test')
-@click.option('--learning-rate', default=0.001, help='Set the learning rate')
-@click.option('--metrics', '-m', default=['accuracy'], multiple=True, help='Set the metrics to output')
-def slstr_cloud(ctx, **kwargs):
-    import sciml_bench.slstr_cloud.main as slstr_cloud_mod
-    _run_benchmark(slstr_cloud_mod, ctx, **kwargs)
-
-
-def _run_benchmark(module, ctx, **kwargs):
-    benchmark_name = ctx.command.name.replace('-', '_')
-
-    now = datetime.now()
-    folder = now.strftime("%Y-%m-%d-%H%M")
-
-    kwargs.update(ctx.obj)
-    kwargs['data_dir'] = Path(kwargs['data_dir']) / benchmark_name
-    kwargs['model_dir'] = str(Path(kwargs['model_dir']).joinpath(benchmark_name).joinpath(folder))
-    kwargs['metrics'] = list(kwargs['metrics'])
-    module.main(**kwargs)
-
-
-# List of all benchmark entrypoint functions
-BENCHMARKS = [
-    dms_classifier,
-    em_denoise,
-    slstr_cloud
-]
-
-# Dict of all benchmark names -> benchmark functions
-BENCHMARK_DICT = {b.name: b for b in BENCHMARKS}
-
-
 @cli.command('list', help='List benchmarks')
 @click.argument('name', default='all', type=click.Choice(['all', 'benchmarks', 'datasets']))
 @click.option('--data-dir', default='data', help='Data directory location', envvar='SCIML_BENCH_DATA_DIR')
@@ -194,9 +134,10 @@ def cmd_list(ctx, name, data_dir):
 @click.option('--verbosity', default=2, type=int, help='Verbosity level to use. 0 is silence, 3 is maximum information')
 @click.option('--log-level', default='info', type=click.Choice(['debug', 'info', 'warning', 'error', 'critical']), help='Log level to use for printing to stdout')
 @click.option('--skip/--no-skip', default=True, help='Whether to skip or exit on encountering an exception')
-@click.option('--config', default=None, type=str, help='Configration file for running benchmarks')
-@click.pass_context
-def run(ctx, benchmark_names, skip=True, **params):
+def run(benchmark_names, skip=True, **params):
+    # Load configuration for benchmarks
+    config = load_yaml('config.yml')
+
     LOGGER.setLevel(params.get('log_level').upper())
     if params.get('verbosity') < 2:
         LOGGER.setLevel(logging.WARNING)
@@ -205,20 +146,17 @@ def run(ctx, benchmark_names, skip=True, **params):
 
     set_environment_variables(**params)
 
-    ctx.ensure_object(dict)
-    ctx.obj.update(params)
-
     if params.get('verbosity') >= 2:
         print_header()
 
-    model_dir = ctx.obj['model_dir']
-    data_dir = ctx.obj['data_dir']
+    model_dir = params['model_dir']
+    data_dir = params['data_dir']
 
     data_dir = Path(data_dir)
 
     if not data_dir.exists():
         LOGGER.error("Data directory {} does not exist!".format(data_dir))
-        ctx.abort()
+        click.Abort()
 
     LOGGER.info('Model directory is: %s', str(model_dir))
     LOGGER.info('Data directory is: %s', str(data_dir))
@@ -231,7 +169,7 @@ def run(ctx, benchmark_names, skip=True, **params):
     for name in benchmark_names:
         if name not in BENCHMARK_DICT:
             LOGGER.error('Benchmark {} does not exist!'.format(name))
-            ctx.abort()
+            click.Abort()
 
     # Log which benchmarks we will run
     LOGGER.info('Selected the following benchmarks:')
@@ -240,10 +178,10 @@ def run(ctx, benchmark_names, skip=True, **params):
 
     # Ok, run all requested benchmarks
     for name in benchmark_names:
-        benchmark = BENCHMARK_DICT[name]
-        LOGGER.info('Running %s benchmark', benchmark.name)
 
-        benchmark_data_dir = data_dir / benchmark.name.replace('-', '_')
+        LOGGER.info('Running %s benchmark', name)
+
+        benchmark_data_dir = data_dir / name
 
         if not benchmark_data_dir.exists():
             LOGGER.error('Data directory {} does not exist! Is the data for benchmark {} downloaded?'.format(str(benchmark_data_dir), name))
@@ -252,10 +190,16 @@ def run(ctx, benchmark_names, skip=True, **params):
                 LOGGER.error('Skipping benchmark {}'.format(name))
                 continue
             else:
-                ctx.abort()
+                click.Abort()
+
+        benchmark = BENCHMARK_DICT[name](benchmark_data_dir)
+
+        cfg = dict(config[name])
+        cfg.update(params)
+        cfg['data_dir'] = benchmark_data_dir
 
         try:
-            ctx.invoke(benchmark, data_dir=benchmark_data_dir, model_dir=model_dir)
+            run_benchmark(benchmark, **cfg)
         except Exception as e:
             LOGGER.debug(traceback.format_exc())
             LOGGER.error('Failed to run benchmark {} due to unhandled exception.\n{}'.format(name, e))
@@ -264,7 +208,7 @@ def run(ctx, benchmark_names, skip=True, **params):
                 LOGGER.info('Skipping benchmark {}'.format(name))
                 continue
             else:
-                ctx.abort()
+                click.Abort()
 
 
 @cli.command(help='Display system information')

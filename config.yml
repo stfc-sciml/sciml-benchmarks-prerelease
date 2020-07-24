@@ -1,0 +1,20 @@
+dms_classifier:
+    epochs: 10
+    loss: 'binary_crossentropy'
+    batch_size: 256
+    learning_rate: 1e-4
+    metrics: [accuracy]
+
+em_denoise:
+    epochs : 10
+    loss : mse
+    batch_size : 256
+    learning_rate : 0.01
+    metrics : []
+
+slstr_cloud:
+    epochs : 30
+    loss : binary_crossentropy
+    batch_size : 32
+    learning_rate : 0.001
+    metrics : ['accuracy']
