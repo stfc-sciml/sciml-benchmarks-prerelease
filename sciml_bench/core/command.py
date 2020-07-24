@@ -194,7 +194,7 @@ def cmd_list(ctx, name, data_dir):
 @click.option('--verbosity', default=2, type=int, help='Verbosity level to use. 0 is silence, 3 is maximum information')
 @click.option('--log-level', default='info', type=click.Choice(['debug', 'info', 'warning', 'error', 'critical']), help='Log level to use for printing to stdout')
 @click.option('--skip/--no-skip', default=True, help='Whether to skip or exit on encountering an exception')
-@click_config_file.configuration_option(provider=yaml_provider, implicit=False)
+@click.option('--config', default=None, type=str, help='Configration file for running benchmarks')
 @click.pass_context
 def run(ctx, benchmark_names, skip=True, **params):
     LOGGER.setLevel(params.get('log_level').upper())

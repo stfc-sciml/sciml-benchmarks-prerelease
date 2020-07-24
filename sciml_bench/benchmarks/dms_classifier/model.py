@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+
 def small_cnn_classifier(input_shape, dropout=0., learning_rate=0.001, **params):
     """
     A very basic setup of a small CNN for testing on classification problems
@@ -27,4 +28,3 @@ def small_cnn_classifier(input_shape, dropout=0., learning_rate=0.001, **params)
     model.add(tf.keras.layers.Dense(1, activation='sigmoid'))
 
     return model
-

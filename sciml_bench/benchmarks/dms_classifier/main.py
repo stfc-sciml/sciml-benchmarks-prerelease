@@ -1,7 +1,7 @@
 from sciml_bench.core.logging import LOGGER
-from sciml_bench.dms_classifier.data_loader import DMSDataset
-from sciml_bench.dms_classifier.model import small_cnn_classifier
 from sciml_bench.core.utils.runner import build_benchmark
+from sciml_bench.benchmarks.dms_classifier.data_loader import DMSDataset
+from sciml_bench.benchmarks.dms_classifier.model import small_cnn_classifier
 
 
 def main(data_dir, **params):

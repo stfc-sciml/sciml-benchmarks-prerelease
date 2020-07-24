@@ -1,7 +1,7 @@
 from sciml_bench.core.logging import LOGGER
-from sciml_bench.em_denoise.data_loader import EMGrapheneDataset
-from sciml_bench.em_denoise.model import autoencoder
 from sciml_bench.core.utils.runner import build_benchmark
+from sciml_bench.benchmarks.em_denoise.data_loader import EMGrapheneDataset
+from sciml_bench.benchmarks.em_denoise.model import autoencoder
 
 
 def main(data_dir, **params):

@@ -5,7 +5,7 @@ from pathlib import Path
 import horovod.tensorflow as hvd
 
 from sciml_bench.core.data_loader import DataLoader
-from sciml_bench.dms_classifier.constants import IMG_HEIGHT, IMG_WIDTH, N_CHANNELS
+from sciml_bench.benchmarks.dms_classifier.constants import IMG_HEIGHT, IMG_WIDTH, N_CHANNELS
 
 
 class DMSDataset(DataLoader):

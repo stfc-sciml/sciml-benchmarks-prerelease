@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+
 def autoencoder(input_shape, learning_rate=0.001, **params):
     skip_layers = []
 

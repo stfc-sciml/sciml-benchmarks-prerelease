@@ -5,7 +5,7 @@ from pathlib import Path
 import horovod.tensorflow as hvd
 
 from sciml_bench.core.data_loader import DataLoader
-from sciml_bench.em_denoise.constants import IMG_SIZE
+from sciml_bench.benchmarks.em_denoise.constants import IMG_SIZE
 
 
 class EMGrapheneDataset(DataLoader):

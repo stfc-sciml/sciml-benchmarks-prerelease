@@ -6,7 +6,7 @@ import numpy as np
 import horovod.tensorflow as hvd
 
 from sciml_bench.core.data_loader import DataLoader
-from sciml_bench.slstr_cloud.constants import PATCH_SIZE, IMAGE_H, IMAGE_W, N_CHANNELS
+from sciml_bench.benchmarks.slstr_cloud.constants import PATCH_SIZE, IMAGE_H, IMAGE_W, N_CHANNELS
 
 
 class SLSTRDataLoader(DataLoader):

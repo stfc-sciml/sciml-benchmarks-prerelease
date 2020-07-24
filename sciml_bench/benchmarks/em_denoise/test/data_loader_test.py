@@ -1,8 +1,8 @@
 import pytest
 import horovod.tensorflow as hvd
 from pathlib import Path
-from sciml_bench.em_denoise.constants import IMG_SIZE
-from sciml_bench.em_denoise.data_loader import EMGrapheneDataset
+from sciml_bench.benchmarks.em_denoise.constants import IMG_SIZE
+from sciml_bench.benchmarks.em_denoise.data_loader import EMGrapheneDataset
 
 
 @pytest.fixture(scope='module')

@@ -4,8 +4,8 @@ import pytest
 import horovod.tensorflow as hvd
 from pathlib import Path
 
-from sciml_bench.slstr_cloud.data_loader import SLSTRDataLoader
-from sciml_bench.slstr_cloud.constants import PATCH_SIZE, N_CHANNELS
+from sciml_bench.benchmarks.slstr_cloud.data_loader import SLSTRDataLoader
+from sciml_bench.benchmarks.slstr_cloud.constants import PATCH_SIZE, N_CHANNELS
 
 hvd.init()
 

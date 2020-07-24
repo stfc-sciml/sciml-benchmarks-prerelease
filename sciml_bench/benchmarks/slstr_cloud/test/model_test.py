@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-from sciml_bench.slstr_cloud.model import unet
+from sciml_bench.benchmarks.slstr_cloud.model import unet
 
 
 def test_unet():
