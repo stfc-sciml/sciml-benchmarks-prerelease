@@ -11,7 +11,7 @@ from sciml_bench.slstr_cloud.constants import PATCH_SIZE, IMAGE_H, IMAGE_W, N_CH
 
 class SLSTRDataLoader(DataLoader):
 
-    def __init__(self, data_dir: Path, shuffle: bool = True, batch_size: int=32):
+    def __init__(self, data_dir: Path, shuffle: bool = True, batch_size: int=32, **kwargs):
         self._data_dir = data_dir
 
         self._image_paths = Path(self._data_dir).glob('**/S3A*.hdf')
@@ -23,11 +23,11 @@ class SLSTRDataLoader(DataLoader):
         assert len(self._image_paths) > 0, 'No image data found in path!'
 
     @property
-    def input_size(self):
+    def input_shape(self):
         return (PATCH_SIZE, PATCH_SIZE, N_CHANNELS)
 
     @property
-    def output_size(self):
+    def output_shape(self):
         return (PATCH_SIZE, PATCH_SIZE, 1)
 
     def _load_data(self, path):

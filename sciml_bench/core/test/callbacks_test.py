@@ -6,6 +6,7 @@ from sciml_bench.core.tracking import TrackingClient
 from sciml_bench.core.test.helpers import fake_model_fn, FakeDataLoader
 from sciml_bench.core.callbacks import DeviceLogger, HostLogger, TrackingCallback, NodeLogger
 
+
 def test_DeviceLogger(mocker, tmpdir):
 
     logger = DeviceLogger(tmpdir, interval=0.1)
@@ -33,6 +34,7 @@ def test_DeviceLogger(mocker, tmpdir):
         assert 'memory' in gpu
         assert 'free' in gpu['memory']
         assert 'used' in gpu['memory']
+
 
 def test_HostLogger(mocker, tmpdir):
 
@@ -81,16 +83,17 @@ def test_Callback(tmpdir):
     loader = FakeDataLoader((10, 10), (1, ))
     model = fake_model_fn((10, 10))
 
-    model.fit(loader.train_fn(batch_size=1), callbacks=[TrackingCallback(tmpdir, batch_size=1, log_batch=True)])
+    model.fit(loader.to_dataset(batch_size=1), callbacks=[TrackingCallback(tmpdir, batch_size=1, log_batch=True)])
 
     db = TrackingClient(tmpdir / 'logs.json')
     assert len(db.get_metric('train_log')) == 1
+
 
 def test_TrackingCallback(tmpdir):
     loader = FakeDataLoader((10, 10), (1, ))
     model = fake_model_fn((10, 10))
     hook = TrackingCallback(tmpdir, batch_size=1)
-    model.fit(loader.train_fn(batch_size=1), callbacks=[hook])
+    model.fit(loader.to_dataset(batch_size=1), callbacks=[hook])
 
     db = TrackingClient(tmpdir / 'logs.json')
     assert len(db.get_metric('train_log')) == 1
@@ -100,25 +103,27 @@ def test_TrackingCallback_predict(tmpdir):
     loader = FakeDataLoader((10, 10), (1, ))
     model = fake_model_fn((10, 10))
     hook = TrackingCallback(tmpdir, batch_size=1)
-    model.predict(loader.test_fn(batch_size=1), callbacks=[hook])
+    model.predict(loader.to_dataset(batch_size=1), callbacks=[hook])
 
     db = TrackingClient(tmpdir / 'logs.json')
     assert len(db.get_metric('predict_log')) == 1
+
 
 def test_TrackingCallback_train_with_validation(tmpdir):
     loader = FakeDataLoader((10, 10), (1, ))
     model = fake_model_fn((10, 10))
     hook = TrackingCallback(tmpdir, batch_size=1)
-    model.fit(loader.train_fn(batch_size=1), validation_data=loader.test_fn(batch_size=1), callbacks=[hook])
+    model.fit(loader.to_dataset(batch_size=1), validation_data=loader.to_dataset(batch_size=1), callbacks=[hook])
 
     db = TrackingClient(tmpdir / 'logs.json')
     assert len(db.get_metric('test_log')) == 1
+
 
 def test_TrackingCallback_multiple_epochs(tmpdir):
     loader = FakeDataLoader((10, 10), (1, ))
     model = fake_model_fn((10, 10))
     hook = TrackingCallback(tmpdir, batch_size=1, warmup_steps=0)
-    model.fit(loader.train_fn(batch_size=1), callbacks=[hook], epochs=5)
+    model.fit(loader.to_dataset(batch_size=1), callbacks=[hook], epochs=5)
 
     # We expect 5 calls to epoch duration & train samples per sec
     # Followed by one call to train duration at the end

@@ -6,7 +6,7 @@ from sciml_bench.core.utils.runner import build_benchmark
 
 def main(data_dir, **params):
     LOGGER.info('Beginning DMS Classifier Benchmark')
-    dataset = DMSDataset(data_dir=data_dir,
-                               seed=params['seed'])
-    runner = build_benchmark(params.get('model_dir'), small_cnn_classifier, dataset)
+    dataset = DMSDataset(data_dir=data_dir / 'train', **params)
+    validation_dataset = DMSDataset(data_dir=data_dir / 'test', **params)
+    runner = build_benchmark(params.get('model_dir'), small_cnn_classifier, dataset, validation_dataset)
     runner.run(**params)

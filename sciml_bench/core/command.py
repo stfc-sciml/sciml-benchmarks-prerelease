@@ -14,10 +14,12 @@ from sciml_bench.core.report import create_report
 from sciml_bench.core.logging import LOGGER
 from sciml_bench.core.download import download_datasets
 
+
 def yaml_provider(file_path, cmd_name):
     with open(file_path) as config_data:
         cfg = yaml.load(config_data, yaml.SafeLoader)
         return cfg
+
 
 def print_header():
     import horovod.tensorflow as hvd
@@ -49,6 +51,7 @@ def print_header():
     plurality = 'es' if len(data) > 1 else ''
     for node_name, local_size in data:
         LOGGER.info('%s has %s process%s', node_name, local_size, plurality)
+
 
 def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
     # Optimization flags
@@ -131,6 +134,7 @@ def slstr_cloud(ctx, **kwargs):
     import sciml_bench.slstr_cloud.main as slstr_cloud_mod
     _run_benchmark(slstr_cloud_mod, ctx, **kwargs)
 
+
 def _run_benchmark(module, ctx, **kwargs):
     benchmark_name = ctx.command.name.replace('-', '_')
 
@@ -138,10 +142,11 @@ def _run_benchmark(module, ctx, **kwargs):
     folder = now.strftime("%Y-%m-%d-%H%M")
 
     kwargs.update(ctx.obj)
-    kwargs['data_dir'] = str(Path(kwargs['data_dir']) / benchmark_name)
+    kwargs['data_dir'] = Path(kwargs['data_dir']) / benchmark_name
     kwargs['model_dir'] = str(Path(kwargs['model_dir']).joinpath(benchmark_name).joinpath(folder))
     kwargs['metrics'] = list(kwargs['metrics'])
     module.main(**kwargs)
+
 
 # List of all benchmark entrypoint functions
 BENCHMARKS = [
@@ -261,6 +266,7 @@ def run(ctx, benchmark_names, skip=True, **params):
             else:
                 ctx.abort()
 
+
 @cli.command(help='Display system information')
 def sysinfo():
     from sciml_bench.core.system import HostSpec, DeviceSpecs, bytesto
@@ -298,14 +304,12 @@ def sysinfo():
         click.echo('Total Memory: {:.2f}GB'.format(bytesto(memory, 'g')))
 
 
-
 @cli.command(help='Download benchmark datasets from remote store')
 @click.argument('name', type=click.Choice(['all', 'em_denoise', 'dms_classifier', 'slstr_cloud']))
 @click.argument('destination')
 @click.option('--user', default=None, help='Username to use to login to remote data store')
 def download(*args, **kwargs):
     download_datasets(*args, **kwargs)
-
 
 
 @cli.command(help='Generate report from benchmark runs')

@@ -10,12 +10,12 @@ class DataLoader():
 
     @property
     @abstractmethod
-    def input_size(self):
+    def input_shape(self):
         pass
 
     @property
     @abstractmethod
-    def output_size(self):
+    def output_shape(self):
         pass
 
     @abstractmethod

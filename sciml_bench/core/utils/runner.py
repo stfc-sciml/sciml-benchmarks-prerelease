@@ -92,6 +92,6 @@ class MultiNodeBenchmarkRunner:
                 self._benchmark.predict(**params)
 
 
-def build_benchmark(model_dir, model_fn, dataset, using_mpi=True):
-    benchmark = MultiNodeBenchmark(model_fn, dataset)
+def build_benchmark(model_dir, model_fn, dataset, validation_dataset):
+    benchmark = MultiNodeBenchmark(model_fn, dataset, validation_dataset)
     return MultiNodeBenchmarkRunner(model_dir, benchmark)

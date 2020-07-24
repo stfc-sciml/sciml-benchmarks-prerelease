@@ -43,6 +43,12 @@ def test_sentinel3_dataset_train_fn(data_dir):
     assert msk.min() == 0
 
 
+def test_create_data_properties(data_dir):
+    data_loader = SLSTRDataLoader(data_dir, batch_size=2)
+    assert data_loader.input_shape == (PATCH_SIZE, PATCH_SIZE, N_CHANNELS)
+    assert data_loader.output_shape == (PATCH_SIZE, PATCH_SIZE, 1)
+
+
 @pytest.mark.loadtest
 def test_sentinel3_dataset_test_fn(data_dir):
     dataset = SLSTRDataLoader(data_dir, batch_size=2).to_dataset()

@@ -1,5 +1,5 @@
 # Size of each patch to feed to the network
-PATCH_SIZE = 512
+PATCH_SIZE = 256
 # Original height of the image
 IMAGE_H = 1200
 # Original width of the image

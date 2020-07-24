@@ -1,4 +1,3 @@
-import numpy as np
 import tensorflow as tf
 from pathlib import Path
 import horovod.tensorflow.keras as hvd
@@ -9,17 +8,16 @@ from sciml_bench.core.callbacks import TrackingCallback
 
 class MultiNodeBenchmark:
 
-    def __init__(self, model_fn, dataset):
+    def __init__(self, model_fn, dataset, validation_dataset=None):
         self._model = None
         self._model_fn = model_fn
         self._dataset = dataset
+        self._validation_dataset = validation_dataset
 
     def build(self, log_batch=False, loss=tf.losses.BinaryCrossentropy(), learning_rate=0.001, metrics=['accuracy'], **params):
         self._log_batch = log_batch
 
-        # Horovod: adjust learning rate based on number of GPUs.
-
-        self._model = self._model_fn(self._dataset.dimensions, **params)
+        self._model = self._model_fn(self._dataset.input_shape, **params)
 
         opt = tf.optimizers.Adam(learning_rate * hvd.size())
         opt = hvd.DistributedOptimizer(opt)
@@ -36,13 +34,10 @@ class MultiNodeBenchmark:
             raise RuntimeError("Model has not been built!\n \
                     Please call benchmark.build() first to compile the model!")
 
-        spe = int(np.ceil(self._dataset.train_size / params['global_batch_size']))
-
         # Add hooks for Horovod
         hooks = [
             hvd.callbacks.BroadcastGlobalVariablesCallback(0),
             hvd.callbacks.MetricAverageCallback(),
-            hvd.callbacks.LearningRateWarmupCallback(steps_per_epoch=spe, warmup_epochs=lr_warmup, verbose=0),
         ]
 
         if hvd.rank() == 0:
@@ -58,15 +53,13 @@ class MultiNodeBenchmark:
 
         LOGGER.info('Begin Training...')
         LOGGER.info('Training for {} epochs'.format(epochs))
-        LOGGER.info('Epoch contains {} steps'.format(spe))
 
-        dataset = self._dataset.train_fn(params['batch_size'])
+        dataset = self._dataset.to_dataset()
 
         LOGGER.debug('Fitting Start')
 
         self._model.fit(dataset,
                 epochs=epochs,
-                steps_per_epoch=spe,
                 callbacks=hooks,
                 verbose=verbose)
 
@@ -83,13 +76,10 @@ class MultiNodeBenchmark:
             raise RuntimeError("Model has not been built!\n \
                     Please call benchmark.build() first to compile the model!")
 
-        predict_steps = int(np.ceil(self._dataset.test_size / params['global_batch_size']))
-
         # Add hooks for Horovod
         hooks = [
             hvd.callbacks.BroadcastGlobalVariablesCallback(0),
             hvd.callbacks.MetricAverageCallback(),
-            hvd.callbacks.LearningRateWarmupCallback(steps_per_epoch=predict_steps, warmup_epochs=lr_warmup, verbose=0),
         ]
 
         if hvd.rank() == 0:
@@ -99,11 +89,10 @@ class MultiNodeBenchmark:
             hooks.append(tracker_hook)
 
         LOGGER.info('Begin Predict...')
-        LOGGER.info('Predicting for {} steps'.format(predict_steps))
 
-        dataset = self._dataset.test_fn(params['batch_size'])
+        dataset = self._validation_dataset.to_dataset()
         verbose = 1 if params.get('verbosity', 0) > 1 and hvd.rank() == 0 else 0
 
         LOGGER.debug('Evaluate Start')
-        self._model.evaluate(dataset, steps=predict_steps, callbacks=hooks, verbose=verbose)
+        self._model.evaluate(dataset, callbacks=hooks, verbose=verbose)
         LOGGER.debug('Evaluate End')
