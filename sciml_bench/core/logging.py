@@ -1,6 +1,7 @@
 import os
 import logging
 import horovod.tensorflow as hvd
+hvd.init()
 
 # Set TF CPP logs to correct level
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'

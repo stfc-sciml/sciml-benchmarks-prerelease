@@ -2,7 +2,6 @@ import os
 import traceback
 import string
 import logging
-import warnings
 import sys
 import yaml
 import click
@@ -106,10 +105,11 @@ def dms_classifier(ctx, **kwargs):
     import sciml_bench.dms_classifier.main as dms_classifier_mod
     _run_benchmark(dms_classifier_mod, ctx, **kwargs)
 
+
 @cli.command(help='Run the Electron Microscopy Denoise Benchmark', hidden=True)
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
 @click.pass_context
-@click.option('--epochs', default=10, help='Set number of epochs')
+@click.option('--epochs', default=1, help='Set number of epochs')
 @click.option('--loss', default='mse', help='Set loss function to use')
 @click.option('--batch-size', default=256, help='Set the batch size for training & test')
 @click.option('--learning-rate', default=0.01, help='Set the learning rate')
@@ -117,6 +117,7 @@ def dms_classifier(ctx, **kwargs):
 def em_denoise(ctx, **kwargs):
     import sciml_bench.em_denoise.main as em_denoise_mod
     _run_benchmark(em_denoise_mod, ctx, **kwargs)
+
 
 @cli.command(help='Run the SLSTR Cloud Segmentation Benchmark', hidden=True)
 @click_config_file.configuration_option(provider=yaml_provider, implicit=False)
@@ -173,6 +174,7 @@ def cmd_list(ctx, name, data_dir):
             downloaded = path.exists()
             click.echo('{}\t\tDownloaded: {}'.format(benchmark.name, downloaded))
 
+
 @cli.command(help='Run SciML benchmarks')
 @click.argument('benchmark_names', nargs=-1, type=click.Choice(['all', ] + [b.name for b in BENCHMARKS]))
 @click.option('--data-dir', default='data', help='Data directory location', envvar='SCIML_BENCH_DATA_DIR')
@@ -197,15 +199,6 @@ def run(ctx, benchmark_names, skip=True, **params):
         LOGGER.setLevel(logging.CRITICAL)
 
     set_environment_variables(**params)
-
-    warnings.filterwarnings('ignore', category=DeprecationWarning)
-    with warnings.catch_warnings():
-        try:
-            import horovod.tensorflow as hvd
-            hvd.init()
-        except Exception as e:
-            LOGGER.debug(traceback.format_exc())
-            LOGGER.critical('Error initializing Horovod: %s', e)
 
     ctx.ensure_object(dict)
     ctx.obj.update(params)

@@ -1,7 +1,6 @@
 import time
 import tensorflow as tf
 from threading import Timer
-from abc import abstractmethod, ABCMeta
 import horovod.tensorflow as hvd
 from pathlib import Path
 
@@ -9,9 +8,10 @@ from sciml_bench.core.tracking import TrackingClient
 from sciml_bench.core.dllogger import AverageMeter
 from sciml_bench.core.system import DeviceSpecs, HostSpec
 
+
 class TrackingCallback(tf.keras.callbacks.Callback):
 
-    def __init__(self, output_dir,batch_size, warmup_steps=1, log_batch=False):
+    def __init__(self, output_dir, batch_size, warmup_steps=1, log_batch=False):
         self._db = TrackingClient(Path(output_dir) / 'logs.json')
         self._current_step = 0
         self._warmup_steps = warmup_steps
@@ -70,10 +70,11 @@ class TrackingCallback(tf.keras.callbacks.Callback):
             return
 
         metrics = {
-                'duration': time.time() - self._epoch_begin_time,
-                'samples_per_sec': self._train_meter.get_value()
+            'duration': time.time() - self._epoch_begin_time,
+            'samples_per_sec': self._train_meter.get_value()
         }
-        metrics.update(logs)
+        if logs is not None:
+            metrics.update(logs)
         self._db.log_metric('epoch_log', metrics, step=epoch)
 
     def on_train_begin(self, logs=None):
@@ -81,21 +82,23 @@ class TrackingCallback(tf.keras.callbacks.Callback):
 
     def on_train_end(self, logs=None):
         metrics = {
-                'duration': time.time() - self._train_begin_time,
-                'samples_per_sec': self._train_meter.get_value()
+            'duration': time.time() - self._train_begin_time,
+            'samples_per_sec': self._train_meter.get_value()
         }
-        metrics.update(logs)
+        if logs is not None:
+            metrics.update(logs)
         self._db.log_metric('train_log', metrics)
 
-    def on_test_begin(self,logs=None):
+    def on_test_begin(self, logs=None):
         self._test_begin_time = time.time()
 
-    def on_test_end(self,logs=None):
+    def on_test_end(self, logs=None):
         metrics = {
-                'duration': time.time() - self._test_begin_time,
-                'samples_per_sec': self._test_meter.get_value()
+            'duration': time.time() - self._test_begin_time,
+            'samples_per_sec': self._test_meter.get_value()
         }
-        metrics.update(logs)
+        if logs is not None:
+            metrics.update(logs)
         self._db.log_metric('test_log', metrics)
 
     def on_predict_begin(self, logs=None):
@@ -103,10 +106,11 @@ class TrackingCallback(tf.keras.callbacks.Callback):
 
     def on_predict_end(self, logs=None):
         metrics = {
-                'duration': time.time() - self._predict_begin_time,
-                'samples_per_sec': self._predict_meter.get_value()
+            'duration': time.time() - self._predict_begin_time,
+            'samples_per_sec': self._predict_meter.get_value()
         }
-        metrics.update(logs)
+        if logs is not None:
+            metrics.update(logs)
         self._db.log_metric('predict_log', metrics)
 
 
@@ -114,9 +118,9 @@ class RepeatedTimer(Timer):
 
     def __init__(self, interval, *args, **kwargs):
         super(RepeatedTimer, self).__init__(interval, self.run)
-        self.interval   = interval
-        self.args       = args
-        self.kwargs     = kwargs
+        self.interval = interval
+        self.args = args
+        self.kwargs = kwargs
         self.daemon = True
 
     def run(self):
@@ -126,12 +130,13 @@ class RepeatedTimer(Timer):
     def __enter__(self):
         self.start()
 
-    def __exit__(self ,type, value, traceback):
+    def __exit__(self, type, value, traceback):
         self.cancel()
+
 
 class DeviceLogger(RepeatedTimer):
 
-    def __init__(self, output_dir, name='',  prefix='', *args, **kwargs):
+    def __init__(self, output_dir, name='', prefix='', *args, **kwargs):
         super(DeviceLogger, self).__init__(*args, **kwargs)
 
         self._step = 0
@@ -155,6 +160,7 @@ class DeviceLogger(RepeatedTimer):
         self._db.log_metric('device_log', metrics, self._step)
         self._step += 1
 
+
 class HostLogger(RepeatedTimer):
 
     def __init__(self, output_dir, name='', prefix='', per_device=False, *args, **kwargs):
@@ -169,17 +175,18 @@ class HostLogger(RepeatedTimer):
 
     def _run(self):
         metrics = {
-                'execution_mode': self._prefix,
-                'name': self._name,
-                'cpu': {'percent': self._spec.cpu_percent},
-                'memory': self._spec.memory,
-                'disk': self._spec.disk_io,
-                'net': self._spec.net_io
+            'execution_mode': self._prefix,
+            'name': self._name,
+            'cpu': {'percent': self._spec.cpu_percent},
+            'memory': self._spec.memory,
+            'disk': self._spec.disk_io,
+            'net': self._spec.net_io
         }
 
         # edge case to prevent logging if the session has died
         self._db.log_metric('host_log', metrics, self._step)
         self._step += 1
+
 
 class NodeLogger:
 
@@ -188,8 +195,10 @@ class NodeLogger:
 
     def __init__(self, output_dir, name='', prefix='', interval=0.1):
         if hvd.local_rank() == 0:
-            self._host_logger = HostLogger(output_dir, name=name, prefix=prefix, interval=interval)
-            self._device_logger = DeviceLogger(output_dir, name=name, prefix=prefix,interval=interval)
+            self._host_logger = HostLogger(
+                output_dir, name=name, prefix=prefix, interval=interval)
+            self._device_logger = DeviceLogger(
+                output_dir, name=name, prefix=prefix, interval=interval)
 
     def has_loggers(self):
         return self._host_logger is not None and self._device_logger is not None
@@ -201,7 +210,7 @@ class NodeLogger:
 
         return self
 
-    def __exit__(self ,type, value, traceback):
+    def __exit__(self, type, value, traceback):
         if self.has_loggers():
             self._host_logger.cancel()
             self._device_logger.cancel()

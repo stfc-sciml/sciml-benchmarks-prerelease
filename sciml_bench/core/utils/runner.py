@@ -8,6 +8,7 @@ from sciml_bench.core.system import HostSpec, DeviceSpecs
 from sciml_bench.core.callbacks import NodeLogger
 from sciml_bench.core.utils.benchmark import MultiNodeBenchmark
 
+
 class MultiNodeBenchmarkRunner:
 
     def __init__(self, output_dir, benchmark):
@@ -57,13 +58,13 @@ class MultiNodeBenchmarkRunner:
         for gpu in gpus:
             try:
                 tf.config.experimental.set_memory_growth(gpu, True)
-            except:
+            except Exception:
                 LOGGER.warning('Could not set GPU memory growth == True')
 
         if gpus:
             tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], 'GPU')
 
-        params['num_replicas' ] = hvd.size()
+        params['num_replicas'] = hvd.size()
         num_replicas = params['num_replicas']
         params['global_batch_size'] = params['batch_size'] * num_replicas
 
@@ -89,6 +90,7 @@ class MultiNodeBenchmarkRunner:
         if 'predict' in params['exec_mode']:
             with NodeLogger(self._output_dir, name=self._node_name, prefix='predict', interval=log_interval):
                 self._benchmark.predict(**params)
+
 
 def build_benchmark(model_dir, model_fn, dataset, using_mpi=True):
     benchmark = MultiNodeBenchmark(model_fn, dataset)
