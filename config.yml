@@ -1,3 +1,6 @@
+# search_path:
+#     - "~/git/intel-e2e-benchmark/e2e_benchmark"
+
 dms_classifier:
     epochs: 10
     loss: 'binary_crossentropy'

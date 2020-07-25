@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from .logger import LOGGER, StdOutBackend, MLPerfBackend, JsonBackend, CompactBackend, Scope, AverageMeter, StandardMeter
-from . import tags
+from sciml_bench.core.dllogger.logger import LOGGER, StdOutBackend, MLPerfBackend, JsonBackend, CompactBackend, Scope, AverageMeter, StandardMeter
+from sciml_bench.core.dllogger import tags
 
 __all__ = [LOGGER, StdOutBackend, MLPerfBackend, JsonBackend, CompactBackend, Scope, AverageMeter, StandardMeter, tags]

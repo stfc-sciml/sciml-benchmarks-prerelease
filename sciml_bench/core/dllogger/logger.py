@@ -23,7 +23,7 @@ import functools
 from collections import OrderedDict
 import datetime
 
-from . import autologging
+from sciml_bench.core.dllogger import autologging
 
 NVLOGGER_NAME = 'nv_dl_logger'
 NVLOGGER_VERSION = '0.3.1'

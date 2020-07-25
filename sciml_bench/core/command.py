@@ -8,9 +8,9 @@ import click
 from pathlib import Path
 
 import sciml_bench
+from sciml_bench.core.logging import LOGGER
 from sciml_bench.benchmarks import register_all_objects
 from sciml_bench.core.report import create_report
-from sciml_bench.core.logging import LOGGER
 from sciml_bench.core.download import download_datasets
 from sciml_bench.core.runner import run_benchmark
 from sciml_bench.benchmarks import BENCHMARKS
@@ -150,7 +150,10 @@ def run(benchmark_names, skip=True, **params):
     if params.get('verbosity') >= 2:
         print_header()
 
+    # Find all & import all modules in search path to register models with sciml_bench
     register_all_objects()
+    for path in config.get('search_path', []):
+        register_all_objects(path)
 
     model_dir = params['model_dir']
     data_dir = params['data_dir']

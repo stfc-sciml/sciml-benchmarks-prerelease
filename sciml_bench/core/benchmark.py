@@ -1,4 +1,6 @@
+import inspect
 from collections import defaultdict
+from sciml_bench.core.logging import LOGGER
 import tensorflow as tf
 
 # Registry of model functions for each benchmark spec
@@ -28,6 +30,10 @@ class BenchmarkSpec:
 
         data_loader_class = DATA_LOADER_REGISTRY[self.name][-1]
         validation_data_loader_class = VALIDATION_DATA_LOADER_REGISTRY[self.name][-1]
+
+        LOGGER.debug('Model function is {} defined in {}'.format(self.model_func.__name__, inspect.getfile(self.model_func)))
+        LOGGER.debug('Data loader class is {} defined in {}'.format(data_loader_class.__name__, inspect.getfile(data_loader_class)))
+        LOGGER.debug('Validation data loader class is {} defined in {}'.format(validation_data_loader_class.__name__, inspect.getfile(validation_data_loader_class)))
 
         self.data_loader = data_loader_class(data_dir / self.train_dir, **kwargs)
         self.validation_data_loader = validation_data_loader_class(data_dir / self.test_dir, **kwargs)
