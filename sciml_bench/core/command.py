@@ -192,11 +192,11 @@ def run(benchmark_names, skip=True, **params):
             else:
                 click.Abort()
 
-        benchmark = BENCHMARK_DICT[name](benchmark_data_dir)
-
         cfg = dict(config[name])
         cfg.update(params)
         cfg['data_dir'] = benchmark_data_dir
+
+        benchmark = BENCHMARK_DICT[name](**cfg)
 
         try:
             run_benchmark(benchmark, **cfg)

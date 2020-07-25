@@ -3,7 +3,7 @@ import tensorflow as tf
 
 class BenchmarkSpec:
 
-    def __init__(self, model_func, data_loader, validation_data_loader, optimizer='adam', loss_function='binary_crossentropy', model_params={}, loss_params={}, optimizer_params={}, metrics={}):
+    def __init__(self, model_func, data_loader, validation_data_loader, optimizer='adam', loss_function='binary_crossentropy', model_params={}, loss_params={}, optimizer_params={}, metrics={}, **kwargs):
         self.data_loader = data_loader
         self.validation_data_loader = validation_data_loader
         self.loss_function = loss_function

@@ -12,28 +12,28 @@ from sciml_bench.benchmarks.slstr_cloud.model import unet
 class DefaultDMSClassfierSpec(BenchmarkSpec):
     name = 'dms_classifier'
 
-    def __init__(self, data_dir):
-        data_loader = DMSDataset(data_dir / 'train')
-        validation_data_loader = DMSDataset(data_dir / 'test')
-        super().__init__(model_func=small_cnn_classifier, data_loader=data_loader, validation_data_loader=validation_data_loader)
+    def __init__(self, data_dir, **kwargs):
+        data_loader = DMSDataset(data_dir / 'train', **kwargs)
+        validation_data_loader = DMSDataset(data_dir / 'test', **kwargs)
+        super().__init__(model_func=small_cnn_classifier, data_loader=data_loader, validation_data_loader=validation_data_loader, **kwargs)
 
 
 class DefaultEMDenoiseSpec(BenchmarkSpec):
     name = 'em_denoise'
 
-    def __init__(self, data_dir):
-        data_loader = EMGrapheneDataset(data_dir / 'train')
-        validation_data_loader = EMGrapheneDataset(data_dir / 'test')
-        super().__init__(model_func=autoencoder, data_loader=data_loader, validation_data_loader=validation_data_loader)
+    def __init__(self, data_dir, **kwargs):
+        data_loader = EMGrapheneDataset(data_dir / 'train', **kwargs)
+        validation_data_loader = EMGrapheneDataset(data_dir / 'test', **kwargs)
+        super().__init__(model_func=autoencoder, data_loader=data_loader, validation_data_loader=validation_data_loader, **kwargs)
 
 
 class DefaultSLSTRCloudSpec(BenchmarkSpec):
     name = 'slstr_cloud'
 
-    def __init__(self, data_dir):
-        data_loader = SLSTRDataLoader(data_dir / 'train')
-        validation_data_loader = SLSTRDataLoader(data_dir / 'test')
-        super().__init__(model_func=unet, data_loader=data_loader, validation_data_loader=validation_data_loader)
+    def __init__(self, data_dir, **kwargs):
+        data_loader = SLSTRDataLoader(data_dir / 'pixbox', **kwargs)
+        validation_data_loader = SLSTRDataLoader(data_dir / 'pixbox', **kwargs)
+        super().__init__(model_func=unet, data_loader=data_loader, validation_data_loader=validation_data_loader, **kwargs)
 
 
 BENCHMARKS = [
