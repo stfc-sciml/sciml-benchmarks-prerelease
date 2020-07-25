@@ -4,10 +4,13 @@ import numpy as np
 from pathlib import Path
 import horovod.tensorflow as hvd
 
+import sciml_bench.mark
 from sciml_bench.core.data_loader import DataLoader
 from sciml_bench.benchmarks.dms_classifier.constants import IMG_HEIGHT, IMG_WIDTH, N_CHANNELS
 
 
+@sciml_bench.mark.data_loader('dms_classifier')
+@sciml_bench.mark.validation_data_loader('dms_classifier')
 class DMSDataset(DataLoader):
 
     def __init__(self, data_dir, seed=None, batch_size: int=10, **kwargs):

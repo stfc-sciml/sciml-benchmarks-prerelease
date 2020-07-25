@@ -1,6 +1,8 @@
+import sciml_bench.mark
 import tensorflow as tf
 
 
+@sciml_bench.mark.model_function('dms_classifier')
 def small_cnn_classifier(input_shape, dropout=0., learning_rate=0.001, **params):
     """
     A very basic setup of a small CNN for testing on classification problems

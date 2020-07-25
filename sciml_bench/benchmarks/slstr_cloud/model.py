@@ -1,8 +1,10 @@
 from typing import Tuple
 import tensorflow as tf
 from tensorflow.keras import layers
+import sciml_bench.mark
 
 
+@sciml_bench.mark.model_function('slstr_cloud')
 def unet(input_shape: Tuple[int, int, int], **kwargs) -> tf.keras.Model:
 
     input_layer = layers.Input(input_shape)

@@ -5,10 +5,13 @@ import tensorflow as tf
 import numpy as np
 import horovod.tensorflow as hvd
 
+import sciml_bench.mark
 from sciml_bench.core.data_loader import DataLoader
 from sciml_bench.benchmarks.slstr_cloud.constants import PATCH_SIZE, IMAGE_H, IMAGE_W, N_CHANNELS
 
 
+@sciml_bench.mark.data_loader('slstr_cloud')
+@sciml_bench.mark.validation_data_loader('slstr_cloud')
 class SLSTRDataLoader(DataLoader):
 
     def __init__(self, data_dir: Path, shuffle: bool = True, batch_size: int=32, **kwargs):

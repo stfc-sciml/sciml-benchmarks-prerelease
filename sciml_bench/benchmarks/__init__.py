@@ -1,43 +1,46 @@
+from pathlib import Path
 from sciml_bench.core.benchmark import BenchmarkSpec
-from sciml_bench.benchmarks.dms_classifier.data_loader import DMSDataset
-from sciml_bench.benchmarks.dms_classifier.model import small_cnn_classifier
-
-from sciml_bench.benchmarks.em_denoise.data_loader import EMGrapheneDataset
-from sciml_bench.benchmarks.em_denoise.model import autoencoder
-
-from sciml_bench.benchmarks.slstr_cloud.data_loader import SLSTRDataLoader
-from sciml_bench.benchmarks.slstr_cloud.model import unet
 
 
-class DefaultDMSClassfierSpec(BenchmarkSpec):
+class DMSClassfierSpec(BenchmarkSpec):
     name = 'dms_classifier'
-
-    def __init__(self, data_dir, **kwargs):
-        data_loader = DMSDataset(data_dir / 'train', **kwargs)
-        validation_data_loader = DMSDataset(data_dir / 'test', **kwargs)
-        super().__init__(model_func=small_cnn_classifier, data_loader=data_loader, validation_data_loader=validation_data_loader, **kwargs)
+    train_dir = 'train'
+    test_dir = 'test'
 
 
-class DefaultEMDenoiseSpec(BenchmarkSpec):
+class EMDenoiseSpec(BenchmarkSpec):
     name = 'em_denoise'
-
-    def __init__(self, data_dir, **kwargs):
-        data_loader = EMGrapheneDataset(data_dir / 'train', **kwargs)
-        validation_data_loader = EMGrapheneDataset(data_dir / 'test', **kwargs)
-        super().__init__(model_func=autoencoder, data_loader=data_loader, validation_data_loader=validation_data_loader, **kwargs)
+    train_dir = 'train'
+    test_dir = 'test'
 
 
-class DefaultSLSTRCloudSpec(BenchmarkSpec):
+class SLSTRCloudSpec(BenchmarkSpec):
     name = 'slstr_cloud'
-
-    def __init__(self, data_dir, **kwargs):
-        data_loader = SLSTRDataLoader(data_dir / 'pixbox', **kwargs)
-        validation_data_loader = SLSTRDataLoader(data_dir / 'pixbox', **kwargs)
-        super().__init__(model_func=unet, data_loader=data_loader, validation_data_loader=validation_data_loader, **kwargs)
+    train_dir = 'pixbox'
+    test_dir = 'pixbox'
 
 
+# Register a list of all possible benchmark specifications.
 BENCHMARKS = [
-    DefaultDMSClassfierSpec,
-    DefaultEMDenoiseSpec,
-    DefaultSLSTRCloudSpec
+    DMSClassfierSpec,
+    EMDenoiseSpec,
+    SLSTRCloudSpec
 ]
+
+
+def register_all_objects():
+    import importlib
+    from sciml_bench.core.logging import LOGGER
+
+    module_dir = Path(__file__).parent.parent
+
+    LOGGER.debug('Importing modules from {}'.format(module_dir))
+
+    _benchmark_modules = module_dir.glob('**/*.py')
+    for module_name in _benchmark_modules:
+        module_path = module_name.relative_to(module_dir.parent)
+        module_path = module_path.with_suffix('')
+        module_path = str(module_path)
+        module_path = module_path.replace('/', '.')
+        LOGGER.debug(module_path)
+        importlib.import_module(str(module_path))

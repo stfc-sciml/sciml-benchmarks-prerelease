@@ -4,10 +4,13 @@ import numpy as np
 from pathlib import Path
 import horovod.tensorflow as hvd
 
+import sciml_bench.mark
 from sciml_bench.core.data_loader import DataLoader
 from sciml_bench.benchmarks.em_denoise.constants import IMG_SIZE
 
 
+@sciml_bench.mark.data_loader('em_denoise')
+@sciml_bench.mark.validation_data_loader('em_denoise')
 class EMGrapheneDataset(DataLoader):
 
     def __init__(self, data_dir, seed=None, batch_size=10, **kwargs):

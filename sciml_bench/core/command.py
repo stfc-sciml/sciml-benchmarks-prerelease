@@ -8,6 +8,7 @@ import click
 from pathlib import Path
 
 import sciml_bench
+from sciml_bench.benchmarks import register_all_objects
 from sciml_bench.core.report import create_report
 from sciml_bench.core.logging import LOGGER
 from sciml_bench.core.download import download_datasets
@@ -148,6 +149,8 @@ def run(benchmark_names, skip=True, **params):
 
     if params.get('verbosity') >= 2:
         print_header()
+
+    register_all_objects()
 
     model_dir = params['model_dir']
     data_dir = params['data_dir']

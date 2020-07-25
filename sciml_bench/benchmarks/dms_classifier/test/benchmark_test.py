@@ -2,7 +2,6 @@ import pytest
 from pathlib import Path
 from sciml_bench.benchmarks.dms_classifier.model import small_cnn_classifier
 from sciml_bench.benchmarks.dms_classifier.data_loader import DMSDataset
-from sciml_bench.benchmarks.dms_classifier.benchmark import DMSBenchmarkClosed
 
 
 @pytest.fixture
