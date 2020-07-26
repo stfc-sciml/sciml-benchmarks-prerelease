@@ -1,32 +1,9 @@
 import importlib
 from pathlib import Path
-from sciml_bench.core.benchmark import BenchmarkSpec
-
-
-class DMSClassfierSpec(BenchmarkSpec):
-    name = 'dms_classifier'
-    train_dir = 'train'
-    test_dir = 'test'
-
-
-class EMDenoiseSpec(BenchmarkSpec):
-    name = 'em_denoise'
-    train_dir = 'train'
-    test_dir = 'test'
-
-
-class SLSTRCloudSpec(BenchmarkSpec):
-    name = 'slstr_cloud'
-    train_dir = 'pixbox'
-    test_dir = 'pixbox'
-
+from sciml_bench.core.benchmark import BENCHMARK_REGISTRY
 
 # Register a list of all possible benchmark specifications.
-BENCHMARKS = [
-    DMSClassfierSpec,
-    EMDenoiseSpec,
-    SLSTRCloudSpec
-]
+BENCHMARKS = BENCHMARK_REGISTRY
 
 
 def register_all_objects(module_dir=None):

@@ -7,6 +7,12 @@ import tensorflow as tf
 # This provides a mapping from str -> list, where the key is the name of the
 # benchmark spec and the value is a list of registered functions for that spec.
 # Currently we take the last function added as the one to use.
+BENCHMARK_REGISTRY = {}
+
+# Registry of model functions for each benchmark spec
+# This provides a mapping from str -> list, where the key is the name of the
+# benchmark spec and the value is a list of registered functions for that spec.
+# Currently we take the last function added as the one to use.
 MODEL_FUNCS_REGISTRY = defaultdict(list)
 
 # Registry of data loaders for each benchmark spec
@@ -24,6 +30,16 @@ VALIDATION_DATA_LOADER_REGISTRY = defaultdict(list)
 
 class BenchmarkSpec:
 
+    epochs = None
+    loss_function = None
+    batch_size = None
+    optimizer = None
+
+    model_params={}
+    loss_params={}
+    optimizer_params={}
+    metrics=[]
+
     def __init__(self, data_dir, optimizer='adam', loss_function='binary_crossentropy', model_params={}, loss_params={}, optimizer_params={}, metrics={}, **kwargs):
 
         self.model_func = MODEL_FUNCS_REGISTRY[self.name][-1]
@@ -35,17 +51,17 @@ class BenchmarkSpec:
         LOGGER.debug('Data loader class is {} defined in {}'.format(data_loader_class.__name__, inspect.getfile(data_loader_class)))
         LOGGER.debug('Validation data loader class is {} defined in {}'.format(validation_data_loader_class.__name__, inspect.getfile(validation_data_loader_class)))
 
-        self.data_loader = data_loader_class(data_dir / self.train_dir, **kwargs)
-        self.validation_data_loader = validation_data_loader_class(data_dir / self.test_dir, **kwargs)
+        self.data_loader = data_loader_class(data_dir / self.train_dir, batch_size=self.batch_size, **kwargs)
+        self.validation_data_loader = validation_data_loader_class(data_dir / self.test_dir, batch_size=self.batch_size, **kwargs)
 
         self.loss_function = loss_function
         self.optimizer = optimizer
         self.metrics = metrics
 
         # Params for model objects
-        self.model_params = model_params
-        self.loss_params = loss_params
-        self.optimizer_params = optimizer_params
+        self.model_params.update(model_params)
+        self.loss_params.update(loss_params)
+        self.optimizer_params.update(optimizer_params)
 
 
 class Benchmark:
@@ -53,11 +69,9 @@ class Benchmark:
     def __init__(self, spec):
         self._spec = spec
 
-
-class TensorflowKerasBenchmark(Benchmark):
-
-    def __init__(self, spec):
-        super().__init__(spec)
+    @property
+    def spec(self):
+        return self._spec
 
     @property
     def data_loader(self):
@@ -67,17 +81,32 @@ class TensorflowKerasBenchmark(Benchmark):
     def validation_data_loader(self):
         return self._spec.validation_data_loader
 
+
+class TensorflowKerasBenchmark(Benchmark):
+
+    def __init__(self, spec):
+        super().__init__(spec)
+
     @property
     def model(self):
         return self._spec.model_func(self._spec.data_loader.input_shape, **self._spec.model_params)
 
     @property
     def loss(self):
-        return tf.keras.losses.get(self._spec.loss_function, **self._spec.loss_params)
+        loss = tf.keras.losses.get(self._spec.loss_function)
+        if hasattr(loss, 'get_config'):
+            cfg = loss.get_config()
+            cfg.update(self._spec.loss_params)
+            loss = loss.from_config(cfg)
+        return loss
 
     @property
     def optimizer(self):
-        return tf.keras.optimizers.get(self._spec.optimizer, **self._spec.optimizer_params)
+        opt = tf.keras.optimizers.get(self._spec.optimizer)
+        cfg = opt.get_config()
+        cfg.update(self._spec.optimizer_params)
+        opt = opt.from_config(cfg)
+        return opt
 
     @property
     def metrics(self):

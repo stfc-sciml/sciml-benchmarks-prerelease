@@ -15,13 +15,11 @@ from sciml_bench.core.download import download_datasets
 from sciml_bench.core.runner import run_benchmark
 from sciml_bench.benchmarks import BENCHMARKS
 
-# Dict of all benchmark names -> benchmark functions
-BENCHMARK_DICT = {b.name: b for b in BENCHMARKS}
-
 
 def load_yaml(file_path):
     with open(file_path) as config_data:
         cfg = yaml.load(config_data, yaml.SafeLoader)
+        cfg = {} if cfg is None else cfg
         return cfg
 
 
@@ -95,8 +93,7 @@ def set_environment_variables(cpu_only=False, use_amp=False, **kwargs):
 
 
 @click.group()
-@click.pass_context
-def cli(ctx, tracking_uri=None, **kwargs):
+def cli(tracking_uri=None, **kwargs):
     pass
 
 
@@ -122,7 +119,7 @@ def cmd_list(ctx, name, data_dir):
 
 
 @cli.command(help='Run SciML benchmarks')
-@click.argument('benchmark_names', nargs=-1, type=click.Choice(['all', ] + [b.name for b in BENCHMARKS]))
+@click.argument('benchmark_names', nargs=-1)
 @click.option('--data-dir', default='data', help='Data directory location', envvar='SCIML_BENCH_DATA_DIR')
 @click.option('--model-dir', default='sciml-bench-out', type=str, help='Output directory for model results', envvar='SCIML_BENCH_MODEL_DIR')
 @click.option('--lr-warmup', default=3, type=int, help='Number of epochs over which to scale the learning rate.')
@@ -155,6 +152,10 @@ def run(benchmark_names, skip=True, **params):
     for path in config.get('search_path', []):
         register_all_objects(path)
 
+    for name in benchmark_names:
+        if name not in BENCHMARKS:
+            click.Abort('No benchmark with name {}'.format(name))
+
     model_dir = params['model_dir']
     data_dir = params['data_dir']
 
@@ -169,11 +170,11 @@ def run(benchmark_names, skip=True, **params):
 
     # If no benchmarks specified or all then run everything
     if len(benchmark_names) == 0 or 'all' in benchmark_names:
-        benchmark_names = BENCHMARK_DICT.keys()
+        benchmark_names = BENCHMARKS.keys()
 
     # Sanity check: do all the benchmarks exist?
     for name in benchmark_names:
-        if name not in BENCHMARK_DICT:
+        if name not in BENCHMARKS:
             LOGGER.error('Benchmark {} does not exist!'.format(name))
             click.Abort()
 
@@ -198,11 +199,11 @@ def run(benchmark_names, skip=True, **params):
             else:
                 click.Abort()
 
-        cfg = dict(config[name])
+        cfg = dict(config[name]) if name in config else {}
         cfg.update(params)
         cfg['data_dir'] = benchmark_data_dir
 
-        benchmark = BENCHMARK_DICT[name](**cfg)
+        benchmark = BENCHMARKS[name](**cfg)
 
         try:
             run_benchmark(benchmark, **cfg)

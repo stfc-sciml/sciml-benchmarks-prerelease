@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from click.testing import CliRunner
-from sciml_bench.core.command import cli, BENCHMARK_DICT
+from sciml_bench.core.command import cli, BENCHMARKS
 
 
 def test_command_run_single_benchmark(tmpdir, mocker):

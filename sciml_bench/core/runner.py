@@ -103,7 +103,7 @@ class TensorflowKerasBenchmarkRunner(BenchmarkRunner):
     def __init__(self, benchmark, output_dir):
         super().__init__(benchmark, output_dir=output_dir)
 
-    def build(self, log_batch=False, loss=tf.losses.BinaryCrossentropy(), learning_rate=0.001, metrics=['accuracy'], **params):
+    def build(self, log_batch=False, **params):
         self._log_batch = log_batch
 
         self._model = self.benchmark.model
@@ -122,7 +122,7 @@ class TensorflowKerasBenchmarkRunner(BenchmarkRunner):
                     metrics=metrics,
                     experimental_run_tf_function=False)
 
-    def train(self, epochs=1, lr_warmup=3, **params):
+    def train(self, **params):
         verbose = 1 if params.get('verbosity', 0) > 1 and hvd.rank() == 0 else 0
 
         if self._model is None:
@@ -147,14 +147,14 @@ class TensorflowKerasBenchmarkRunner(BenchmarkRunner):
         hooks.append(csv_logger)
 
         LOGGER.info('Begin Training...')
-        LOGGER.info('Training for {} epochs'.format(epochs))
+        LOGGER.info('Training for {} epochs'.format(self.benchmark.spec.epochs))
 
         dataset = self.benchmark.data_loader.to_dataset()
 
         LOGGER.debug('Fitting Start')
 
         self._model.fit(dataset,
-                epochs=epochs,
+                epochs=self.benchmark.spec.epochs,
                 callbacks=hooks,
                 verbose=verbose)
 
@@ -201,7 +201,8 @@ def run_benchmark(benchmark_spec, **params):
 
     params['data_dir'] = Path(params['data_dir']) / benchmark_name
     params['model_dir'] = str(Path(params['model_dir']).joinpath(benchmark_name).joinpath(folder))
-    params['metrics'] = list(params['metrics'])
+    params['metrics'] = list(benchmark_spec.metrics)
+    params['batch_size'] = benchmark_spec.batch_size
 
     benchmark = TensorflowKerasBenchmark(benchmark_spec)
 
