@@ -16,7 +16,18 @@ from sciml_bench.core.runner import run_benchmark
 from sciml_bench.benchmarks import BENCHMARKS
 
 
+def register():
+    config = load_yaml('config.yml')
+    # Find all & import all modules in search path to register models with sciml_bench
+    register_all_objects()
+    for path in config.get('search_path', []):
+        register_all_objects(path)
+
+
 def load_yaml(file_path):
+    if not Path(file_path).exists():
+        return {}
+
     with open(file_path) as config_data:
         cfg = yaml.load(config_data, yaml.SafeLoader)
         cfg = {} if cfg is None else cfg
@@ -102,20 +113,22 @@ def cli(tracking_uri=None, **kwargs):
 @click.option('--data-dir', default='data', help='Data directory location', envvar='SCIML_BENCH_DATA_DIR')
 @click.pass_context
 def cmd_list(ctx, name, data_dir):
+    register()
+
     if name == 'benchmarks' or name == 'all':
         click.echo('Benchmarks\n')
 
         for benchmark in BENCHMARKS:
-            click.echo(benchmark.name)
+            click.echo(benchmark)
 
     if name == 'datasets' or name == 'all':
         click.echo('')
         click.echo('Datasets\n')
 
         for benchmark in BENCHMARKS:
-            path = Path(data_dir).joinpath(benchmark.name.replace('-', '_'))
+            path = Path(data_dir).joinpath(benchmark)
             downloaded = path.exists()
-            click.echo('{}\t\tDownloaded: {}'.format(benchmark.name, downloaded))
+            click.echo('{}\t\tDownloaded: {}'.format(benchmark, downloaded))
 
 
 @cli.command(help='Run SciML benchmarks')
@@ -132,7 +145,7 @@ def cmd_list(ctx, name, data_dir):
 @click.option('--verbosity', default=2, type=int, help='Verbosity level to use. 0 is silence, 3 is maximum information')
 @click.option('--log-level', default='info', type=click.Choice(['debug', 'info', 'warning', 'error', 'critical']), help='Log level to use for printing to stdout')
 @click.option('--skip/--no-skip', default=True, help='Whether to skip or exit on encountering an exception')
-def run(benchmark_names, skip=True, **params):
+def run(benchmark_names, skip, **params):
     # Load configuration for benchmarks
     config = load_yaml('config.yml')
 
@@ -147,14 +160,12 @@ def run(benchmark_names, skip=True, **params):
     if params.get('verbosity') >= 2:
         print_header()
 
-    # Find all & import all modules in search path to register models with sciml_bench
-    register_all_objects()
-    for path in config.get('search_path', []):
-        register_all_objects(path)
+    register()
 
     for name in benchmark_names:
         if name not in BENCHMARKS:
-            click.Abort('No benchmark with name {}'.format(name))
+            LOGGER.error('No benchmark with name {}'.format(name))
+            sys.exit(1)
 
     model_dir = params['model_dir']
     data_dir = params['data_dir']
@@ -163,7 +174,7 @@ def run(benchmark_names, skip=True, **params):
 
     if not data_dir.exists():
         LOGGER.error("Data directory {} does not exist!".format(data_dir))
-        click.Abort()
+        sys.exit(1)
 
     LOGGER.info('Model directory is: %s', str(model_dir))
     LOGGER.info('Data directory is: %s', str(data_dir))
@@ -197,7 +208,7 @@ def run(benchmark_names, skip=True, **params):
                 LOGGER.error('Skipping benchmark {}'.format(name))
                 continue
             else:
-                click.Abort()
+                sys.exit(1)
 
         cfg = dict(config[name]) if name in config else {}
         cfg.update(params)
@@ -215,7 +226,7 @@ def run(benchmark_names, skip=True, **params):
                 LOGGER.info('Skipping benchmark {}'.format(name))
                 continue
             else:
-                click.Abort()
+                sys.exit(1)
 
 
 @cli.command(help='Display system information')
@@ -267,8 +278,9 @@ def download(*args, **kwargs):
 @click.option('--model-dir', default='sciml-bench-out', type=str, help='Output directory for model results', envvar='SCIML_BENCH_MODEL_DIR')
 @click.pass_context
 def report(ctx, model_dir, **kwargs):
+    register()
     for benchmark in BENCHMARKS:
-        benchmark_folder = Path(model_dir) / benchmark.name.replace('-', '_')
+        benchmark_folder = Path(model_dir) / benchmark
         if not benchmark_folder.exists():
             continue
 

@@ -1,10 +1,12 @@
 import numpy as np
 import tensorflow as tf
 
+from sciml_bench.core.benchmark import BenchmarkSpec
+
 
 class FakeDataLoader():
 
-    def __init__(self, input_dims, output_dims, train_size=10, test_size=10, batch_size=10):
+    def __init__(self, input_dims, output_dims, train_size=10, test_size=10, batch_size=10, **kwargs):
         self._input_dims = input_dims
         self._output_dims = output_dims
 
@@ -24,6 +26,14 @@ class FakeDataLoader():
         y = np.random.random((self._train_size, ) + self._output_dims)
         dataset = tf.data.Dataset.from_tensor_slices((X, y))
         return dataset.batch(batch_size)
+
+
+class FakeSpec(BenchmarkSpec):
+    name = 'fake_spec'
+    train_dir = 'train'
+    test_dir = 'test'
+    epochs=0
+    loss_funcion='binary_crossentropy'
 
 
 def fake_model_fn(input_shape, **params):

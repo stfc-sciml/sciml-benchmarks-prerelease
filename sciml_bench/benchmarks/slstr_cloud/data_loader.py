@@ -23,8 +23,6 @@ class SLSTRDataLoader(DataLoader):
         self._shuffle = shuffle
         self.batch_size = batch_size
 
-        assert len(self._image_paths) > 0, 'No image data found in path!'
-
     @property
     def input_shape(self):
         return (PATCH_SIZE, PATCH_SIZE, N_CHANNELS)

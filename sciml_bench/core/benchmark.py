@@ -40,7 +40,7 @@ class BenchmarkSpec:
     optimizer_params={}
     metrics=[]
 
-    def __init__(self, data_dir, optimizer='adam', loss_function='binary_crossentropy', model_params={}, loss_params={}, optimizer_params={}, metrics={}, **kwargs):
+    def __init__(self, data_dir, optimizer='adam', loss_function='binary_crossentropy', model_params={}, loss_params={}, optimizer_params={}, metrics=[], **kwargs):
 
         self.model_func = MODEL_FUNCS_REGISTRY[self.name][-1]
 
@@ -48,11 +48,11 @@ class BenchmarkSpec:
         validation_data_loader_class = VALIDATION_DATA_LOADER_REGISTRY[self.name][-1]
 
         LOGGER.debug('Model function is {} defined in {}'.format(self.model_func.__name__, inspect.getfile(self.model_func)))
-        LOGGER.debug('Data loader class is {} defined in {}'.format(data_loader_class.__name__, inspect.getfile(data_loader_class)))
-        LOGGER.debug('Validation data loader class is {} defined in {}'.format(validation_data_loader_class.__name__, inspect.getfile(validation_data_loader_class)))
+        LOGGER.debug('Data loader class is {}'.format(data_loader_class.__name__))
+        LOGGER.debug('Validation data loader class is {}'.format(validation_data_loader_class.__name__))
 
-        self.data_loader = data_loader_class(data_dir / self.train_dir, batch_size=self.batch_size, **kwargs)
-        self.validation_data_loader = validation_data_loader_class(data_dir / self.test_dir, batch_size=self.batch_size, **kwargs)
+        self.data_loader = data_loader_class(data_dir=data_dir / self.train_dir, batch_size=self.batch_size, **kwargs)
+        self.validation_data_loader = validation_data_loader_class(data_dir=data_dir / self.test_dir, batch_size=self.batch_size, **kwargs)
 
         self.loss_function = loss_function
         self.optimizer = optimizer
