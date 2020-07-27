@@ -3,7 +3,7 @@ from pathlib import Path
 from datetime import datetime
 import horovod.tensorflow.keras as hvd
 
-from sciml_bench.core.logging import LOGGER
+from sciml_bench.core.bench_logger import LOGGER
 from sciml_bench.core.tracking import TrackingClient
 from sciml_bench.core.system import HostSpec, DeviceSpecs
 from sciml_bench.core.callbacks import NodeLogger

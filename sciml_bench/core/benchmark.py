@@ -1,6 +1,6 @@
 import inspect
 from collections import defaultdict
-from sciml_bench.core.logging import LOGGER
+from sciml_bench.core.bench_logger import LOGGER
 import tensorflow as tf
 
 # Registry of model functions for each benchmark spec

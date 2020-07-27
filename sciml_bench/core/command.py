@@ -8,7 +8,7 @@ import click
 from pathlib import Path
 
 import sciml_bench
-from sciml_bench.core.logging import LOGGER
+from sciml_bench.core.bench_logger import LOGGER
 from sciml_bench.benchmarks import register_all_objects
 from sciml_bench.core.report import create_report
 from sciml_bench.core.download import download_datasets

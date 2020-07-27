@@ -7,7 +7,7 @@ BENCHMARKS = BENCHMARK_REGISTRY
 
 
 def register_all_objects(module_dir=None):
-    from sciml_bench.core.logging import LOGGER
+    from sciml_bench.core.bench_logger import LOGGER
 
     if module_dir is None:
         module_dir = Path(__file__).parent.absolute()
