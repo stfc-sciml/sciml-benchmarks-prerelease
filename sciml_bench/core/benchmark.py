@@ -35,6 +35,9 @@ class BenchmarkSpec:
     batch_size = None
     optimizer = None
 
+    train_dir = ''
+    test_dir = ''
+
     model_params={}
     loss_params={}
     optimizer_params={}
@@ -51,12 +54,12 @@ class BenchmarkSpec:
         LOGGER.debug('Data loader class is {}'.format(data_loader_class.__name__))
         LOGGER.debug('Validation data loader class is {}'.format(validation_data_loader_class.__name__))
 
-        self.data_loader = data_loader_class(data_dir=data_dir / self.train_dir, batch_size=self.batch_size, **kwargs)
-        self.validation_data_loader = validation_data_loader_class(data_dir=data_dir / self.test_dir, batch_size=self.batch_size, **kwargs)
+        self.data_loader = data_loader_class(data_dir=data_dir / self.train_dir, batch_size=self.batch_size, is_training_data=True, **kwargs)
+        self.validation_data_loader = validation_data_loader_class(data_dir=data_dir / self.test_dir, batch_size=self.batch_size, is_training_data=False, **kwargs)
 
         self.loss_function = loss_function
         self.optimizer = optimizer
-        self.metrics = metrics
+        self.metrics.extend(metrics)
 
         # Params for model objects
         self.model_params.update(model_params)

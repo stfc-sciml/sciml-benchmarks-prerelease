@@ -5,8 +5,8 @@ from sciml_bench.core.benchmark import BenchmarkSpec
 @sciml_bench.mark.benchmark_spec
 class SLSTRCloudSpec(BenchmarkSpec):
     name = 'slstr_cloud'
-    train_dir = 'pixbox'
-    test_dir = 'pixbox'
+    train_dir = 'one-day'
+    test_dir = 'one-day'
 
     epochs = 30
     loss_function = 'binary_crossentropy'

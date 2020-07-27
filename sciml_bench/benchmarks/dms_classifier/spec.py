@@ -5,11 +5,10 @@ from sciml_bench.core.benchmark import BenchmarkSpec
 @sciml_bench.mark.benchmark_spec
 class DMSClassfierSpec(BenchmarkSpec):
     name = 'dms_classifier'
-    train_dir = 'train'
-    test_dir = 'test'
 
     epochs = 10
-    loss_function = 'binary_crossentropy'
-    batch_size = 256
-    metrics = ['accuracy']
+    loss_function = 'categorical_crossentropy'
+    batch_size = 32
+    metrics = ['categorical_accuracy']
     optimizer_params = dict(learning_rate=0.01)
+    n_classes = 10

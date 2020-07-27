@@ -145,3 +145,5 @@ art
 server
 sciml-bench-out
 jobs/*
+models/*.hdf5
+models/*.h5

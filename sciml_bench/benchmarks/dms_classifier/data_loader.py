@@ -6,24 +6,32 @@ import horovod.tensorflow as hvd
 
 import sciml_bench.mark
 from sciml_bench.core.data_loader import DataLoader
-from sciml_bench.benchmarks.dms_classifier.constants import IMG_HEIGHT, IMG_WIDTH, N_CHANNELS
+from sciml_bench.benchmarks.dms_classifier.constants import IMG_HEIGHT, IMG_WIDTH, N_CHANNELS, N_CLASSES
 
 
 @sciml_bench.mark.data_loader('dms_classifier')
 @sciml_bench.mark.validation_data_loader('dms_classifier')
 class DMSDataset(DataLoader):
 
-    def __init__(self, data_dir, seed=None, batch_size: int=10, **kwargs):
+    def __init__(self, data_dir, seed=None, batch_size: int=10, is_training_data: bool=True, **kwargs):
         self._seed = seed
         self._data_dir = Path(data_dir)
         self._batch_size = batch_size
 
+        if is_training_data:
+            self._image_name = 'data/train'
+            self._label_name = 'labels/train'
+        else:
+            self._image_name = 'data/test'
+            self._label_name = 'labels/test'
+
     def _load_data(self, path):
         path = path.decode()
+
         with h5py.File(path, "r") as hdf5_file:
-            for i in range(len(hdf5_file['images'])):
-                images = np.array(hdf5_file["images"][i])
-                labels = np.array(hdf5_file['labels'][i])
+            for i in range(0, len(hdf5_file[self._image_name]), self._batch_size):
+                images = np.array(hdf5_file[self._image_name][i:i + self._batch_size])
+                labels = np.array(hdf5_file[self._label_name][i:i + self._batch_size])
                 yield images, labels
 
     @property
@@ -35,16 +43,16 @@ class DMSDataset(DataLoader):
         return (1,)
 
     def to_dataset(self):
-        path = str(self._data_dir / 'dms_phases.h5')
+        path = str(self._data_dir / 'dxs-data.hdf5')
         types = (tf.float32, tf.float32)
-        shapes = (tf.TensorShape([IMG_HEIGHT, IMG_WIDTH, 3]),
-                  tf.TensorShape([]))
+        shapes = (tf.TensorShape([None, IMG_HEIGHT, IMG_WIDTH, N_CHANNELS]),
+                  tf.TensorShape([None, N_CLASSES]))
         dataset = tf.data.Dataset.from_generator(self._load_data,
                                                  output_types=types,
                                                  output_shapes=shapes,
                                                  args=(path, ))
+        dataset = dataset.unbatch()
         dataset = dataset.shard(hvd.size(), hvd.rank())
-        dataset = dataset.map(lambda x, y: (x[:, :, :1], y))
         dataset = dataset.shuffle(500)
         dataset = dataset.batch(self._batch_size)
         return dataset
