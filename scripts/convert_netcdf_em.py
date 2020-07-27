@@ -2,8 +2,7 @@ import h5py
 import numpy as np
 from tqdm import tqdm
 from pathlib import Path
-from skimage.transform import resize
-from sciml_bench.slstr_cloud.data_loader import ImageLoader
+
 
 def convert_netcdf():
     path = Path('data/em_denoise').absolute()

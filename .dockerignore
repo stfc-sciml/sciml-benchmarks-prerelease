@@ -10,3 +10,4 @@ mlruns
 art
 server
 scripts
+models/*.h5
