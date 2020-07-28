@@ -1,9 +1,7 @@
 import pytest
 import tensorflow as tf
 import horovod.tensorflow as hvd
-import sciml_bench.mark
-from sciml_bench.core.test.helpers import FakeDataLoader, fake_model_fn, FakeSpec
-from sciml_bench.core.benchmark import TensorflowKerasBenchmark
+from sciml_bench.core.test.helpers import FakeDataLoader, FakeBenchmark, FakeBenchmarkDerived
 
 
 @pytest.fixture()
@@ -11,24 +9,32 @@ def horovod():
     hvd.init()
 
 
-@pytest.fixture()
-def fake_spec():
-    sciml_bench.mark.model_function('fake_spec')(fake_model_fn)
-    sciml_bench.mark.data_loader('fake_spec')(FakeDataLoader)
-    sciml_bench.mark.validation_data_loader('fake_spec')(FakeDataLoader)
+def test_tensorflow_keras_benchmark(tmpdir):
+    benchmark = FakeBenchmark()
 
-
-def test_tensorflow_keras_benchmark(tmpdir, fake_spec):
-    spec = FakeSpec(tmpdir, input_dims=(10, 10, 3), output_dims=(1,))
-    benchmark = TensorflowKerasBenchmark(spec)
-
-    assert benchmark.loss.__name__ == 'binary_crossentropy'
-    assert isinstance(benchmark.optimizer, tf.keras.optimizers.Adam)
+    assert benchmark.loss_.__name__ == 'binary_crossentropy'
+    assert isinstance(benchmark.optimizer_, tf.keras.optimizers.Adam)
     assert benchmark.metrics == []
 
-    assert isinstance(benchmark.data_loader, FakeDataLoader)
-    assert isinstance(benchmark.validation_data_loader, FakeDataLoader)
+    assert isinstance(benchmark.data_loader_, FakeDataLoader)
+    assert isinstance(benchmark.validation_data_loader_, FakeDataLoader)
 
-    assert isinstance(benchmark.model, tf.keras.Model)
-    assert benchmark.model.input_shape[1:] == spec.data_loader.input_shape
-    assert benchmark.model.output_shape[1:] == spec.data_loader.output_shape
+    model = benchmark.model((200, 200, 1))
+    assert isinstance(model, tf.keras.Model)
+    assert model.input_shape[1:] == (200, 200, 1)
+    assert model.output_shape[1:] == (1, )
+
+    benchmark_dervied = FakeBenchmarkDerived()
+    assert benchmark_dervied.epochs == 10
+    assert benchmark_dervied.epochs != benchmark.epochs
+
+    assert benchmark_dervied.loss_ == 'a loss'
+    assert benchmark_dervied.optimizer_ == 'an optimizer'
+
+
+def test_create_benchmark_with_config():
+    benchmark = FakeBenchmark()
+    assert benchmark.epochs == 0
+
+    benchmark = FakeBenchmark(epochs=100)
+    assert benchmark.epochs == 100

@@ -1,8 +1,6 @@
-import sciml_bench.mark
 import tensorflow as tf
 
 
-@sciml_bench.mark.model_function('em_denoise')
 def autoencoder(input_shape, learning_rate=0.001, **params):
     skip_layers = []
 

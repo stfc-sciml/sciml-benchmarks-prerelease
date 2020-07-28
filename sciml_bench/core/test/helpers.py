@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
-from sciml_bench.core.benchmark import BenchmarkSpec
+from sciml_bench.core.benchmark import TensorflowKerasMixin, Benchmark
 
 
 class FakeDataLoader():
@@ -28,19 +28,37 @@ class FakeDataLoader():
         return dataset.batch(batch_size)
 
 
-class FakeSpec(BenchmarkSpec):
-    name = 'fake_spec'
-    train_dir = 'train'
-    test_dir = 'test'
-    epochs=0
-    loss_funcion='binary_crossentropy'
-
-
 def fake_model_fn(input_shape, **params):
     inputs = tf.keras.layers.Input(input_shape)
     x = tf.keras.layers.Flatten()(inputs)
     x = tf.keras.layers.Dense(1)(x)
 
     model = tf.keras.Model(inputs, x)
-    model.compile('sgd', loss='mse')
     return model
+
+
+class FakeFrameworkMixin:
+
+    @property
+    def loss_(self):
+        return 'a loss'
+
+    @property
+    def optimizer_(self):
+        return 'an optimizer'
+
+
+class FakeBenchmark(TensorflowKerasMixin, Benchmark):
+    name = 'fake_spec'
+    loss = 'binary_crossentropy'
+    epochs = 0
+
+    def model(self, input_shape, **kwargs):
+        return fake_model_fn(input_shape)
+
+    def data_loader(self, **kwargs):
+        return FakeDataLoader(input_dims=(200, 200, 1), output_dims=(1,))
+
+
+class FakeBenchmarkDerived(FakeFrameworkMixin, FakeBenchmark):
+    epochs = 10

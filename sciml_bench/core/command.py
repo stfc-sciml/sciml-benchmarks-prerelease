@@ -214,6 +214,7 @@ def run(benchmark_names, skip, **params):
         cfg.update(params)
         cfg['data_dir'] = benchmark_data_dir
 
+        print(cfg)
         benchmark = BENCHMARKS[name](**cfg)
 
         try:

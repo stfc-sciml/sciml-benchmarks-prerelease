@@ -8,7 +8,7 @@ from sciml_bench.core.tracking import TrackingClient
 from sciml_bench.core.system import HostSpec, DeviceSpecs
 from sciml_bench.core.callbacks import NodeLogger
 from sciml_bench.core.callbacks import TrackingCallback
-from sciml_bench.core.benchmark import TensorflowKerasBenchmark
+from sciml_bench.core.benchmark import TensorflowKerasMixin
 
 
 class BenchmarkRunner:
@@ -106,9 +106,9 @@ class TensorflowKerasBenchmarkRunner(BenchmarkRunner):
     def build(self, log_batch=False, **params):
         self._log_batch = log_batch
 
-        self._model = self.benchmark.model
+        self._model = self.benchmark.model(input_shape=self.benchmark.data_loader_.input_shape, **params)
 
-        opt = self.benchmark.optimizer
+        opt = self.benchmark.optimizer_
         opt_cfg = opt.get_config()
         opt_cfg['learning_rate'] *= hvd.size()
         opt = opt.from_config(opt_cfg)
@@ -147,14 +147,14 @@ class TensorflowKerasBenchmarkRunner(BenchmarkRunner):
         hooks.append(csv_logger)
 
         LOGGER.info('Begin Training...')
-        LOGGER.info('Training for {} epochs'.format(self.benchmark.spec.epochs))
+        LOGGER.info('Training for {} epochs'.format(self.benchmark.epochs))
 
-        dataset = self.benchmark.data_loader.to_dataset()
+        dataset = self.benchmark.data_loader_.to_dataset()
 
         LOGGER.debug('Fitting Start')
 
         self._model.fit(dataset,
-                epochs=self.benchmark.spec.epochs,
+                epochs=self.benchmark.epochs,
                 callbacks=hooks,
                 verbose=verbose)
 
@@ -185,7 +185,7 @@ class TensorflowKerasBenchmarkRunner(BenchmarkRunner):
 
         LOGGER.info('Begin Predict...')
 
-        dataset = self.benchmark.validation_data_loader.to_dataset()
+        dataset = self.benchmark.validation_data_loader_.to_dataset()
         verbose = 1 if params.get('verbosity', 0) > 1 and hvd.rank() == 0 else 0
 
         LOGGER.debug('Evaluate Start')
@@ -193,18 +193,25 @@ class TensorflowKerasBenchmarkRunner(BenchmarkRunner):
         LOGGER.debug('Evaluate End')
 
 
-def run_benchmark(benchmark_spec, **params):
-    benchmark_name = benchmark_spec.name
+def run_benchmark(benchmark, **params):
+    benchmark_name = benchmark.name
 
     now = datetime.now()
     folder = now.strftime("%Y-%m-%d-%H%M")
 
     params['data_dir'] = Path(params['data_dir']) / benchmark_name
     params['model_dir'] = str(Path(params['model_dir']).joinpath(benchmark_name).joinpath(folder))
-    params['metrics'] = list(benchmark_spec.metrics)
-    params['batch_size'] = benchmark_spec.batch_size
+    params['metrics'] = list(benchmark.metrics)
+    params['batch_size'] = benchmark.batch_size
 
-    benchmark = TensorflowKerasBenchmark(benchmark_spec)
+    if not isinstance(benchmark, TensorflowKerasMixin):
+        raise RuntimeError("Expected benchmark to be a tensorflow model but it was not!")
+
+    LOGGER.debug('Benchmark %s', benchmark.name)
+    LOGGER.debug('Loss %s', benchmark.loss)
+    LOGGER.debug('Batch size %s', benchmark.batch_size)
+    LOGGER.debug('Optimizer %s', benchmark.optimizer)
+    LOGGER.debug('Epochs %s', benchmark.epochs)
 
     runner = TensorflowKerasBenchmarkRunner(benchmark, output_dir=params['model_dir'])
     runner.run(**params)
