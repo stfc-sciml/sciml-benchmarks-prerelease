@@ -10,10 +10,10 @@ class DMSBenchmark(TensorflowKerasMixin, Benchmark):
 
     epochs = 10
     loss = 'binary_crossentropy'
-    batch_size = 32
+    batch_size = 64
     metrics = ['accuracy']
     optimizer_params = dict(learning_rate=0.01)
-    n_classes = 10
+    n_classes = 7
 
     def model(self, input_shape, **params):
         return dms_classifier(input_shape, **params)
