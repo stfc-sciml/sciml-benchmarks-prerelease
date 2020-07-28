@@ -83,6 +83,7 @@ def test_Callback(tmpdir):
     loader = FakeDataLoader((10, 10), (1, ))
     model = fake_model_fn((10, 10))
 
+    model.compile(loss='binary_crossentropy')
     model.fit(loader.to_dataset(batch_size=1), callbacks=[TrackingCallback(tmpdir, batch_size=1, log_batch=True)])
 
     db = TrackingClient(tmpdir / 'logs.json')
@@ -92,6 +93,7 @@ def test_Callback(tmpdir):
 def test_TrackingCallback(tmpdir):
     loader = FakeDataLoader((10, 10), (1, ))
     model = fake_model_fn((10, 10))
+    model.compile(loss='binary_crossentropy')
     hook = TrackingCallback(tmpdir, batch_size=1)
     model.fit(loader.to_dataset(batch_size=1), callbacks=[hook])
 
@@ -102,6 +104,7 @@ def test_TrackingCallback(tmpdir):
 def test_TrackingCallback_predict(tmpdir):
     loader = FakeDataLoader((10, 10), (1, ))
     model = fake_model_fn((10, 10))
+    model.compile(loss='binary_crossentropy')
     hook = TrackingCallback(tmpdir, batch_size=1)
     model.predict(loader.to_dataset(batch_size=1), callbacks=[hook])
 
@@ -112,6 +115,7 @@ def test_TrackingCallback_predict(tmpdir):
 def test_TrackingCallback_train_with_validation(tmpdir):
     loader = FakeDataLoader((10, 10), (1, ))
     model = fake_model_fn((10, 10))
+    model.compile(loss='binary_crossentropy')
     hook = TrackingCallback(tmpdir, batch_size=1)
     model.fit(loader.to_dataset(batch_size=1), validation_data=loader.to_dataset(batch_size=1), callbacks=[hook])
 
@@ -122,6 +126,7 @@ def test_TrackingCallback_train_with_validation(tmpdir):
 def test_TrackingCallback_multiple_epochs(tmpdir):
     loader = FakeDataLoader((10, 10), (1, ))
     model = fake_model_fn((10, 10))
+    model.compile(loss='binary_crossentropy')
     hook = TrackingCallback(tmpdir, batch_size=1, warmup_steps=0)
     model.fit(loader.to_dataset(batch_size=1), callbacks=[hook], epochs=5)
 
