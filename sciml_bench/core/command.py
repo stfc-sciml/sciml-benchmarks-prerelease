@@ -163,7 +163,7 @@ def run(benchmark_names, skip, **params):
     register()
 
     for name in benchmark_names:
-        if name not in BENCHMARKS:
+        if name not in BENCHMARKS and name != 'all':
             LOGGER.error('No benchmark with name {}'.format(name))
             sys.exit(1)
 
@@ -182,12 +182,6 @@ def run(benchmark_names, skip, **params):
     # If no benchmarks specified or all then run everything
     if len(benchmark_names) == 0 or 'all' in benchmark_names:
         benchmark_names = BENCHMARKS.keys()
-
-    # Sanity check: do all the benchmarks exist?
-    for name in benchmark_names:
-        if name not in BENCHMARKS:
-            LOGGER.error('Benchmark {} does not exist!'.format(name))
-            click.Abort()
 
     # Log which benchmarks we will run
     LOGGER.info('Selected the following benchmarks:')
