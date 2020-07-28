@@ -11,7 +11,7 @@ class EMDenoiseBenchmark(TensorflowKerasMixin, Benchmark):
     train_dir = 'train'
     test_dir = 'test'
     epochs = 10
-    loss_function = 'mse'
+    loss = 'mse'
     batch_size = 256
     optimizer_params = dict(learning_rate=0.01)
 
