@@ -1,10 +1,20 @@
-import json
-from tensorflow.keras.models import model_from_json
+import tensorflow as tf
+from tensorflow.keras import layers
 from tensorflow.keras.layers.experimental.preprocessing import Normalization
 
 
-def resnet_classifier(input_shape, **kwargs):
-    with open('models/dms_classifier/model.json') as handle:
-        config = json.load(handle)
-    model = model_from_json(config, custom_objects={'Normalization': Normalization})
+def dms_classifier(input_shape, **kwargs) -> tf.keras.Model:
+    input_layer = layers.Input(input_shape)
+    x = input_layer
+
+    x = Normalization()(x)
+    x = layers.Conv2D(32, kernel_size=3)(x)
+    x = layers.Conv2D(32, kernel_size=3)(x)
+    x = layers.MaxPooling2D(2)(x)
+    x = layers.Dropout(.2)(x)
+    x = layers.Flatten()(x)
+    x = layers.Dropout(.2)(x)
+    x = layers.Dense(7, activation='sigmoid')(x)
+
+    model = tf.keras.models.Model(input_layer, x)
     return model
