@@ -49,7 +49,7 @@ class DMSDataset(DataLoader):
                                                  output_shapes=shapes,
                                                  args=(path, ))
         dataset = dataset.unbatch()
-        dataset = dataset.shard(hvd.size(), hvd.rank())
         dataset = dataset.shuffle(2000)
+        dataset = dataset.shard(hvd.size(), hvd.rank())
         dataset = dataset.batch(self._batch_size)
         return dataset
