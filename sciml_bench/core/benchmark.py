@@ -40,6 +40,7 @@ class Benchmark(ABC):
 
     loss_params={}
     optimizer_params={}
+    fit_params={}
     metrics=[]
 
     def __init__(self, **config):

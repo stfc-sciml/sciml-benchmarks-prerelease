@@ -1,7 +1,7 @@
 import pytest
 import horovod.tensorflow as hvd
 from pathlib import Path
-from sciml_bench.benchmarks.dms_classifier.constants import IMG_HEIGHT, IMG_WIDTH, N_CHANNELS, N_CLASSES
+from sciml_bench.benchmarks.dms_classifier.constants import IMG_HEIGHT, IMG_WIDTH, N_CHANNELS
 from sciml_bench.benchmarks.dms_classifier.data_loader import DMSDataset
 
 
@@ -26,7 +26,7 @@ def test_train_fn(data_dir):
     inputs, outputs = next(dataset.as_numpy_iterator())
 
     assert inputs.shape == (10, IMG_HEIGHT, IMG_WIDTH, N_CHANNELS)
-    assert outputs.shape == (10, N_CLASSES)
+    assert outputs.shape == (10, )
 
 
 @pytest.mark.loadtest
@@ -36,4 +36,4 @@ def test_test_fn(data_dir):
     inputs, outputs = next(dataset.as_numpy_iterator())
 
     assert inputs.shape == (10, IMG_HEIGHT, IMG_WIDTH, N_CHANNELS)
-    assert outputs.shape == (10, N_CLASSES)
+    assert outputs.shape == (10, )
