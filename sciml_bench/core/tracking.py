@@ -1,18 +1,19 @@
 import time
-import copy
 import numpy as np
 from tinydb import TinyDB, Query
 
 
 def sanitize_dict(d):
-    d = copy.deepcopy(d)
+    d = d.copy()
     for k, v in d.items():
         if type(v) is dict:
             v = sanitize_dict(v)
-        elif isinstance(v, np.floating):
+        elif isinstance(v, np.floating) or isinstance(v, float):
             v = float(v)
         elif isinstance(v, set):
             v = list(v)
+        elif hasattr(v, '__name__'):
+            v = v.__name__
         else:
             v = str(v)
         d[k] = v

@@ -1,6 +1,17 @@
 from pathlib import Path
 from tinydb import TinyDB, Query
-from sciml_bench.core.tracking import TrackingClient
+from sciml_bench.core.tracking import TrackingClient, sanitize_dict
+
+
+def test_sanitize_dict():
+    valid_dict = {'loss': set([1, 2, 3]), 'acc': .99}
+    new_dict = sanitize_dict(valid_dict)
+    assert new_dict == {'loss': [1, 2, 3], 'acc': .99}
+
+    dict_with_objs = {'metrics': object()}
+    new_dict = sanitize_dict(dict_with_objs)
+    assert isinstance(new_dict['metrics'], str)
+
 
 def test_create_benchmark(tmpdir):
 
@@ -15,6 +26,7 @@ def test_create_benchmark(tmpdir):
     with TinyDB(path) as db:
         assert db.count(Query().name == 'log') == 2
 
+
 def test_log_metric(tmpdir):
     name = 'my-benchmark.json'
     client = TrackingClient(tmpdir / name)
@@ -25,6 +37,7 @@ def test_log_metric(tmpdir):
 
     with TinyDB(path) as db:
         assert db.count(Query().type == 'metric') == 1
+
 
 def test_log_metrics_non_JSON_type(tmpdir):
     name = 'my-benchmark.json'
