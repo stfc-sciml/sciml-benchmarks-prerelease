@@ -114,7 +114,8 @@ class TensorflowKerasBenchmarkRunner(BenchmarkRunner):
         opt = opt.from_config(opt_cfg)
         opt = hvd.DistributedOptimizer(opt)
 
-        loss = self.benchmark.loss
+        loss = self.benchmark.loss_
+        LOGGER.debug(loss.__name__)
         metrics = self.benchmark.metrics
 
         self._model.compile(loss=loss,
@@ -156,7 +157,7 @@ class TensorflowKerasBenchmarkRunner(BenchmarkRunner):
         self._model.fit(dataset,
                 epochs=self.benchmark.epochs,
                 callbacks=hooks,
-                verbose=verbose)
+                verbose=verbose, **self.benchmark.fit_params)
 
         LOGGER.debug('Fitting End')
 

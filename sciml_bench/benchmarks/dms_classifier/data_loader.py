@@ -5,7 +5,7 @@ from pathlib import Path
 import horovod.tensorflow as hvd
 
 from sciml_bench.core.data_loader import DataLoader
-from sciml_bench.benchmarks.dms_classifier.constants import IMG_HEIGHT, IMG_WIDTH, N_CHANNELS, N_CLASSES
+from sciml_bench.benchmarks.dms_classifier.constants import IMG_HEIGHT, IMG_WIDTH, N_CHANNELS
 
 
 class DMSDataset(DataLoader):
@@ -28,7 +28,7 @@ class DMSDataset(DataLoader):
         with h5py.File(path, "r") as hdf5_file:
             for i in range(0, len(hdf5_file[self._image_name]), self._batch_size):
                 images = np.array(hdf5_file[self._image_name][i:i + self._batch_size])
-                labels = np.array(hdf5_file[self._label_name][i:i + self._batch_size])
+                labels = np.array(hdf5_file[self._label_name][i:i + self._batch_size, 0])
                 yield images, labels
 
     @property
@@ -43,13 +43,13 @@ class DMSDataset(DataLoader):
         path = str(self._data_dir / 'dxs-data.hdf5')
         types = (tf.float32, tf.float32)
         shapes = (tf.TensorShape([None, IMG_HEIGHT, IMG_WIDTH, N_CHANNELS]),
-                  tf.TensorShape([None, N_CLASSES]))
+                  tf.TensorShape([None]))
         dataset = tf.data.Dataset.from_generator(self._load_data,
                                                  output_types=types,
                                                  output_shapes=shapes,
                                                  args=(path, ))
         dataset = dataset.unbatch()
         dataset = dataset.shard(hvd.size(), hvd.rank())
-        dataset = dataset.shuffle(500)
+        dataset = dataset.shuffle(2000)
         dataset = dataset.batch(self._batch_size)
         return dataset

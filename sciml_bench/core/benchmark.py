@@ -78,11 +78,14 @@ class TensorflowKerasMixin:
 
     @property
     def loss_(self) -> tf.keras.losses.Loss:
-        loss = tf.keras.losses.get(self.loss)
-        if hasattr(loss, 'get_config'):
-            cfg = loss.get_config()
-            cfg.update(self.spec.loss_params)
-            loss = loss.from_config(cfg)
+        if isinstance(self.loss, str):
+            loss = tf.keras.losses.get(self.loss)
+            if hasattr(loss, 'get_config'):
+                cfg = loss.get_config()
+                cfg.update(self.spec.loss_params)
+                loss = loss.from_config(cfg)
+        else:
+            loss = self.loss
         return loss
 
     @property

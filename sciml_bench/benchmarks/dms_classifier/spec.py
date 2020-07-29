@@ -1,3 +1,4 @@
+import tensorflow as tf
 from sciml_bench.core.benchmark import TensorflowKerasMixin, Benchmark, register_benchmark
 from sciml_bench.benchmarks.dms_classifier.model import dms_classifier
 from sciml_bench.benchmarks.dms_classifier.data_loader import DMSDataset
@@ -8,12 +9,12 @@ class DMSBenchmark(TensorflowKerasMixin, Benchmark):
     """Default benchmark implementation for DMS Classifier"""
     name = 'dms_classifier'
 
-    epochs = 10
+    epochs = 100
     loss = 'binary_crossentropy'
-    batch_size = 64
-    metrics = ['accuracy']
-    optimizer_params = dict(learning_rate=0.01)
-    n_classes = 7
+    batch_size = 256
+    metrics = ['accuracy', tf.keras.metrics.TruePositives(), tf.keras.metrics.FalsePositives(), tf.keras.metrics.TrueNegatives(), tf.keras.metrics.FalseNegatives()]
+    optimizer_params = dict(learning_rate=0.0001)
+    fit_params = dict(class_weight={0: .7, 1: .3})
 
     def model(self, input_shape, **params):
         return dms_classifier(input_shape, **params)
