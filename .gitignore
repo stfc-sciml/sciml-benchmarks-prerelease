@@ -147,3 +147,4 @@ sciml-bench-out
 jobs/*
 models/*.hdf5
 models/*.h5
+*.out
