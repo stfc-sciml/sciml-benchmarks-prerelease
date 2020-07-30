@@ -11,3 +11,4 @@ art
 server
 scripts
 models/*.h5
+sciml-bench-out
