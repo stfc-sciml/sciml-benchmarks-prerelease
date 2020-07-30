@@ -125,4 +125,4 @@ This with override the default settings and set:
  - The learning rate for the optimizer to 0.001
  - The batch size to 50
 
-You set different entries for each benchmark.
+You can set different entries for each benchmark.
