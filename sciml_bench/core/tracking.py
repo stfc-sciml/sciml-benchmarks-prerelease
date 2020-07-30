@@ -26,7 +26,7 @@ class TrackingClient:
     def __init__(self, path):
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        self._db = TinyDB(path)
+        self._db = TinyDB(str(path))
 
     def log_metric(self, key, value, step=0):
         value = sanitize_dict(value)

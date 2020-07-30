@@ -139,11 +139,12 @@ class TensorflowKerasBenchmarkRunner(BenchmarkRunner):
         if hvd.rank() == 0:
             # These hooks only need to be called by one instance.
             # Therefore we need to only add them on rank == 0
-            tracker_hook = TrackingCallback(params['model_dir'], params['global_batch_size'], self._log_batch)
+            tracker_hook = TrackingCallback(self._output_dir, params['global_batch_size'], self._log_batch)
             hooks.append(tracker_hook)
 
         # Add hook for capturing metrics vs. epoch
-        log_file = Path(params['model_dir']).joinpath('training.log')
+        log_file = Path(self._output_dir).joinpath('training.log')
+        log_file = str(log_file)
         csv_logger = tf.keras.callbacks.CSVLogger(log_file)
         hooks.append(csv_logger)
 
@@ -162,7 +163,7 @@ class TensorflowKerasBenchmarkRunner(BenchmarkRunner):
         LOGGER.debug('Fitting End')
 
         if hvd.rank() == 0:
-            model_dir = Path(params['model_dir'])
+            model_dir = Path(self._output_dir)
             model_dir.mkdir(parents=True, exist_ok=True)
             weights_file = str(model_dir / 'final_weights.h5')
             self._model.save_weights(weights_file)
@@ -181,7 +182,7 @@ class TensorflowKerasBenchmarkRunner(BenchmarkRunner):
         if hvd.rank() == 0:
             # These hooks only need to be called by one instance.
             # Therefore we need to only add them on rank == 0
-            tracker_hook = TrackingCallback(params['model_dir'], params['global_batch_size'], self._log_batch)
+            tracker_hook = TrackingCallback(self._output_dir, params['global_batch_size'], self._log_batch)
             hooks.append(tracker_hook)
 
         LOGGER.info('Begin Predict...')
@@ -204,6 +205,9 @@ def run_benchmark(benchmark, **params):
     params['model_dir'] = str(Path(params['model_dir']).joinpath(benchmark_name).joinpath(folder))
     params['metrics'] = list(benchmark.metrics)
     params['batch_size'] = benchmark.batch_size
+
+    # create the model directory if it does not yet exist
+    Path(params['model_dir']).mkdir(parents=True, exist_ok=True)
 
     if not isinstance(benchmark, TensorflowKerasMixin):
         raise RuntimeError("Expected benchmark to be a tensorflow model but it was not!")
