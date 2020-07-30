@@ -3,7 +3,7 @@
 DOCKER_REMOTE=samueljackson/sciml-bench
 
 .PHONY: sciml-bench-nvidia.sif
-sciml-bench-nvidia.sif: Dockerfile.nvidia sciml-bench-nvidia.cfg
+sciml-bench-nvidia.sif: sciml-bench-nvidia.cfg
 	sudo SINGULARITY_TMPDIR=/home/lhs18285 singularity build -F $@ sciml-bench-nvidia.cfg
 
 
