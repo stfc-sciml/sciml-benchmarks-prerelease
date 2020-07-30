@@ -22,6 +22,6 @@ def test_dms_classifier_backprop():
     X = np.random.random((1, IMG_HEIGHT, IMG_WIDTH, N_CHANNELS))
     Y = np.random.random((1, N_CLASSES))
     model = dms_classifier((IMG_HEIGHT, IMG_WIDTH, N_CHANNELS), learning_rate=0.001)
-    model.compile(loss='categorical_crossentropy', optimizer='adam')
+    model.compile(loss='binary_crossentropy', optimizer='adam')
     history = model.fit(x=X, y=Y)
     assert isinstance(history, tf.keras.callbacks.History)
