@@ -49,3 +49,12 @@ def test_log_metrics_non_JSON_type(tmpdir):
 
     with TinyDB(path) as db:
         assert db.count(Query().type == 'metric') == 1
+
+
+def test_create_tracking_client_no_folder(tmpdir):
+    name = 'my-benchmark.json'
+    tmpdir = tmpdir / 'test-folder'
+    TrackingClient(tmpdir / name)
+
+    path = Path(tmpdir / name).with_suffix('.json')
+    assert path.exists()
