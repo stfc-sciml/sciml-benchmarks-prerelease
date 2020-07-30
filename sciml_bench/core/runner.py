@@ -58,18 +58,6 @@ class BenchmarkRunner:
         return self._benchmark
 
     def setup(self, **params):
-        # Horovod: pin GPU to be used to process local rank (one GPU per process)
-        gpus = tf.config.experimental.list_physical_devices('GPU')
-
-        for gpu in gpus:
-            try:
-                tf.config.experimental.set_memory_growth(gpu, True)
-            except Exception:
-                LOGGER.warning('Could not set GPU memory growth == True')
-
-        if gpus:
-            tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], 'GPU')
-
         params['num_replicas'] = hvd.size()
         num_replicas = params['num_replicas']
         params['global_batch_size'] = params['batch_size'] * num_replicas

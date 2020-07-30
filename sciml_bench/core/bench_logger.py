@@ -1,7 +1,17 @@
 import os
 import logging
+import tensorflow as tf
 import horovod.tensorflow as hvd
 hvd.init()
+
+# Horovod: pin GPU to be used to process local rank (one GPU per process)
+gpus = tf.config.experimental.list_physical_devices('GPU')
+
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
+if gpus:
+    tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], 'GPU')
 
 # Set TF CPP logs to correct level
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
