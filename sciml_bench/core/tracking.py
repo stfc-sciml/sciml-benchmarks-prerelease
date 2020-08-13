@@ -2,6 +2,8 @@ from pathlib import Path
 import time
 import numpy as np
 from tinydb import TinyDB, Query
+from tinydb.storages import JSONStorage
+from tinydb.middlewares import CachingMiddleware
 
 
 def sanitize_dict(d):
@@ -26,7 +28,7 @@ class TrackingClient:
     def __init__(self, path):
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        self._db = TinyDB(str(path))
+        self._db = TinyDB(str(path), storage=CachingMiddleware(JSONStorage))
 
     def log_metric(self, key, value, step=0):
         value = sanitize_dict(value)
@@ -68,3 +70,6 @@ class TrackingClient:
     def get_tags(self):
         query = Query()
         return self._db.search(query.type == 'tag')
+
+    def __del__(self):
+        self._db.close()
