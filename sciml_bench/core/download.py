@@ -23,11 +23,10 @@ def download_file(uri: str, file_name: str):
                 handle.write(chunk)
 
 
-def sync_datasets(benchmark_name):
+def sync_datasets(benchmark_name, data_dir='./data/'):
     LOGGER.info('Downloading Dataset Database at {}'.format(DB_URI))
     download_file(DB_URI, DB_FILE_NAME)
 
-    # Get list of datasets
     conn = sqlite3.connect(DB_FILE_NAME)
     exports_db = pd.read_sql("select * from exports", con=conn)
 
@@ -51,17 +50,14 @@ def sync_datasets(benchmark_name):
                                           bucket_contents.name]
 
     for index, row in bucket_contents.iterrows():
-        file_name = Path(row.key)
+        file_name = Path(data_dir) / Path(row.key)
 
+        LOGGER.info('Downloading {}'.format(file_name))
         if file_name.exists():
+            LOGGER.info('{} already downloaded'.format(file_name))
             continue
 
         file_uri = '/'.join([dataset_uri, str(file_name)])
-        LOGGER.info('Downloading {}'.format(file_name))
 
         file_name.parent.mkdir(parents=True, exist_ok=True)
         download_file(file_uri, file_name)
-
-
-if __name__ == '__main__':
-    sync_datasets('em_denoise')
