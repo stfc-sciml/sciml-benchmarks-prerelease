@@ -11,6 +11,7 @@ pytest-benchmark
 nvidia-ml-py3
 click
 click-config-file
+beautifulsoup
 psutil
 py-cpuinfo
 pytest-mock
