@@ -11,7 +11,7 @@ import sciml_bench
 from sciml_bench.core.bench_logger import LOGGER
 from sciml_bench.benchmarks import register_all_objects
 from sciml_bench.core.report import create_report
-from sciml_bench.core.download import download_datasets
+from sciml_bench.core.download import sync_dataset
 from sciml_bench.core.runner import run_benchmark
 from sciml_bench.benchmarks import BENCHMARKS
 
@@ -261,11 +261,15 @@ def sysinfo():
 
 
 @cli.command(help='Download benchmark datasets from remote store')
-@click.argument('name', type=click.Choice(['all', 'em_denoise', 'dms_classifier', 'slstr_cloud']))
-@click.argument('destination')
-@click.option('--user', default=None, help='Username to use to login to remote data store')
-def download(*args, **kwargs):
-    download_datasets(*args, **kwargs)
+@click.argument('benchmark_names', nargs=-1)
+def download(benchmark_names):
+    for name in benchmark_names:
+        if name not in BENCHMARKS and name != 'all':
+            LOGGER.error('No benchmark with name {}'.format(name))
+            sys.exit(1)
+
+    for name in benchmark_names:
+        sync_dataset(name)
 
 
 @cli.command(help='Generate report from benchmark runs')
