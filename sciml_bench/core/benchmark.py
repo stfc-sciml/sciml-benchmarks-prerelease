@@ -58,6 +58,7 @@ class Benchmark(ABC):
                 else:
                     setattr(self, name, value)
 
+        config = {name: getattr(self, name) for name in dir(self)}
         self.data_loader_ = self.data_loader(**config)
         self.validation_data_loader_ = self.validation_data_loader(**config)
 
