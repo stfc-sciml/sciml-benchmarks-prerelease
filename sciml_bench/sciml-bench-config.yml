@@ -1,0 +1,2 @@
+data_dir: ~/sciml-bench-datasets
+model_dir: sciml-bench-out

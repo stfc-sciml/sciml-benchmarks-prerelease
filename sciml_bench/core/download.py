@@ -23,7 +23,7 @@ def download_file(uri: str, file_name: str):
                 handle.write(chunk)
 
 
-def sync_datasets(benchmark_name, data_dir='./data/'):
+def sync_datasets(benchmark_name, data_dir):
     LOGGER.info('Downloading Dataset Database at {}'.format(DB_URI))
     download_file(DB_URI, DB_FILE_NAME)
 

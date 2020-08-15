@@ -6,18 +6,39 @@ import sys
 import yaml
 import click
 from pathlib import Path
+try:
+    # For python >= 3.7
+    import importlib.resources as pkg_resources
+except ImportError:
+    # Try backported version for python < 3.7
+    import importlib_resources as pkg_resources
 
 import sciml_bench
 from sciml_bench.core.bench_logger import LOGGER
 from sciml_bench.benchmarks import register_all_objects
 from sciml_bench.core.report import create_report
-from sciml_bench.core.download import sync_dataset
+from sciml_bench.core.download import sync_datasets
 from sciml_bench.core.runner import run_benchmark
 from sciml_bench.benchmarks import BENCHMARKS
 
 
+def load_config():
+    pkg_config_resource = pkg_resources.path(sciml_bench, 'sciml-bench-config.yml')
+    user_config_file_name = Path('~/.sciml-bench-config.yml').expanduser()
+    local_config_file_name = Path('sciml-bench-config.yml')
+
+    # load and overwrite configs in order of precedence
+    with pkg_config_resource as pkg_config_file_name:
+        config = load_yaml(str(pkg_config_file_name))
+
+    config.update(load_yaml(user_config_file_name))
+    config.update(load_yaml(local_config_file_name))
+
+    return config
+
+
 def register():
-    config = load_yaml('config.yml')
+    config = load_config()
     # Find all & import all modules in search path to register models with sciml_bench
     register_all_objects()
     for path in config.get('search_path', []):
@@ -110,10 +131,11 @@ def cli(tracking_uri=None, **kwargs):
 
 @cli.command('list', help='List benchmarks')
 @click.argument('name', default='all', type=click.Choice(['all', 'benchmarks', 'datasets']))
-@click.option('--data-dir', default='data', help='Data directory location', envvar='SCIML_BENCH_DATA_DIR')
 @click.pass_context
-def cmd_list(ctx, name, data_dir):
+def cmd_list(ctx, name):
     register()
+
+    config = load_config()
 
     if name == 'benchmarks' or name == 'all':
         click.echo('Benchmarks\n')
@@ -122,19 +144,21 @@ def cmd_list(ctx, name, data_dir):
             click.echo(benchmark)
 
     if name == 'datasets' or name == 'all':
+        data_dir = Path(config.get('data_dir')).expanduser()
+
         click.echo('')
-        click.echo('Datasets\n')
+        click.echo('Datasets (in {})\n'.format(data_dir))
 
         for benchmark in BENCHMARKS:
-            path = Path(data_dir).joinpath(benchmark)
+            path = data_dir.joinpath(benchmark)
             downloaded = path.exists()
             click.echo('{}\t\tDownloaded: {}'.format(benchmark, downloaded))
 
 
 @cli.command(help='Run SciML benchmarks')
 @click.argument('benchmark_names', nargs=-1)
-@click.option('--data-dir', default='data', help='Data directory location', envvar='SCIML_BENCH_DATA_DIR')
-@click.option('--model-dir', default='sciml-bench-out', type=str, help='Output directory for model results', envvar='SCIML_BENCH_MODEL_DIR')
+@click.option('--data-dir', default=None, help='Data directory location', envvar='SCIML_BENCH_DATA_DIR')
+@click.option('--model-dir', default=None, type=str, help='Output directory for model results', envvar='SCIML_BENCH_MODEL_DIR')
 @click.option('--lr-warmup', default=3, type=int, help='Number of epochs over which to scale the learning rate.')
 @click.option('--cpu-only', default=False, is_flag=True, help='Disable GPU execution')
 @click.option('--use-amp', default=False, is_flag=True, help='Enable Automatic Mixed Precision')
@@ -147,7 +171,8 @@ def cmd_list(ctx, name, data_dir):
 @click.option('--skip/--no-skip', default=True, help='Whether to skip or exit on encountering an exception')
 def run(benchmark_names, skip, **params):
     # Load configuration for benchmarks
-    config = load_yaml('config.yml')
+    config = load_config()
+    config.update(params)
 
     LOGGER.setLevel(params.get('log_level').upper())
     if params.get('verbosity') < 2:
@@ -167,10 +192,11 @@ def run(benchmark_names, skip, **params):
             LOGGER.error('No benchmark with name {}'.format(name))
             sys.exit(1)
 
-    model_dir = params['model_dir']
-    data_dir = params['data_dir']
+    model_dir = params['model_dir'] if params['model_dir'] is not None else config['model_dir']
+    data_dir = params['data_dir'] if params['data_dir'] is not None else config['data_dir']
 
-    data_dir = Path(data_dir)
+    model_dir = Path(model_dir).expanduser()
+    data_dir = Path(data_dir).expanduser()
 
     if not data_dir.exists():
         LOGGER.error("Data directory {} does not exist!".format(data_dir))
@@ -205,7 +231,7 @@ def run(benchmark_names, skip, **params):
                 sys.exit(1)
 
         cfg = dict(config[name]) if name in config else {}
-        cfg.update(params)
+        cfg.update(config)
         cfg['data_dir'] = benchmark_data_dir
 
         benchmark = BENCHMARKS[name](**cfg)
@@ -263,13 +289,16 @@ def sysinfo():
 @cli.command(help='Download benchmark datasets from remote store')
 @click.argument('benchmark_names', nargs=-1)
 def download(benchmark_names):
+    config = load_config()
+    data_dir = Path(config.get('data_dir')).expanduser()
+
     for name in benchmark_names:
         if name not in BENCHMARKS and name != 'all':
             LOGGER.error('No benchmark with name {}'.format(name))
             sys.exit(1)
 
     for name in benchmark_names:
-        sync_dataset(name)
+        sync_datasets(name, data_dir)
 
 
 @cli.command(help='Generate report from benchmark runs')
