@@ -299,6 +299,9 @@ def download(benchmark_names):
             LOGGER.error('No benchmark with name {}'.format(name))
             sys.exit(1)
 
+    if 'all' in benchmark_names:
+        benchmark_names = BENCHMARKS.keys()
+
     for name in benchmark_names:
         sync_datasets(name, data_dir)
 
