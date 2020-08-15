@@ -148,3 +148,4 @@ jobs/*
 models/*.hdf5
 models/*.h5
 *.out
+sciml-bench-config.yml
