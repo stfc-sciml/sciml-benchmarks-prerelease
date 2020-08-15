@@ -19,3 +19,4 @@ horovod
 mpi4py
 bokeh
 tinydb
+importlib_resources
