@@ -172,6 +172,10 @@ def cmd_list(ctx, name):
 def run(benchmark_names, skip, **params):
     # Load configuration for benchmarks
     config = load_config()
+
+    params['model_dir'] = params['model_dir'] if params['model_dir'] is not None else config['model_dir']
+    params['data_dir'] = params['data_dir'] if params['data_dir'] is not None else config['data_dir']
+
     config.update(params)
 
     LOGGER.setLevel(params.get('log_level').upper())
@@ -192,11 +196,8 @@ def run(benchmark_names, skip, **params):
             LOGGER.error('No benchmark with name {}'.format(name))
             sys.exit(1)
 
-    model_dir = params['model_dir'] if params['model_dir'] is not None else config['model_dir']
-    data_dir = params['data_dir'] if params['data_dir'] is not None else config['data_dir']
-
-    model_dir = Path(model_dir).expanduser()
-    data_dir = Path(data_dir).expanduser()
+    model_dir = Path(config['model_dir']).expanduser()
+    data_dir = Path(config['data_dir']).expanduser()
 
     if not data_dir.exists():
         LOGGER.error("Data directory {} does not exist!".format(data_dir))

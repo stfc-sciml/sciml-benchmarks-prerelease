@@ -111,6 +111,10 @@ class TensorflowKerasBenchmarkRunner(BenchmarkRunner):
                     metrics=metrics,
                     experimental_run_tf_function=False)
 
+        if hvd.rank() == 0:
+            model_dir = Path(self._output_dir)
+            model_dir.mkdir(parents=True, exist_ok=True)
+
     def train(self, **params):
         verbose = 1 if params.get('verbosity', 0) > 1 and hvd.rank() == 0 else 0
 
@@ -152,7 +156,6 @@ class TensorflowKerasBenchmarkRunner(BenchmarkRunner):
 
         if hvd.rank() == 0:
             model_dir = Path(self._output_dir)
-            model_dir.mkdir(parents=True, exist_ok=True)
             weights_file = str(model_dir / 'final_weights.h5')
             self._model.save_weights(weights_file)
 
@@ -174,6 +177,24 @@ class TensorflowKerasBenchmarkRunner(BenchmarkRunner):
             hooks.append(tracker_hook)
 
         LOGGER.info('Begin Predict...')
+
+        model_dir = Path(self._output_dir)
+        weights_file = model_dir / 'final_weights.h5'
+
+        # Edge case: user is trying to run inference but not training
+        # See if we can find a pre-trained model from another run
+        # If not then throw and error as we're in an inconsistent state.
+        if not weights_file.exists():
+            LOGGER.info('Searching for pre-trained models')
+
+            weight_files = model_dir.parent.glob('**/*final_weights.h5')
+            weight_files = list(sorted(weight_files))
+            if len(weight_files) == 0:
+                raise RuntimeError("No pre-trained model exists! Please train a model before running inference!")
+            weights_file = weight_files[-1]
+
+        LOGGER.info('Using weights file: {}'.format(str(weights_file)))
+        self._model.load_weights(str(weights_file))
 
         dataset = self.benchmark.validation_data_loader_.to_dataset()
         verbose = 1 if params.get('verbosity', 0) > 1 and hvd.rank() == 0 else 0
