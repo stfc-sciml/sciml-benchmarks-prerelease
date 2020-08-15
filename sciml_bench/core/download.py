@@ -1,3 +1,5 @@
+import time
+import os
 import math
 import sqlite3
 import requests
@@ -24,14 +26,18 @@ def download_file(uri: str, file_name: str):
 
 
 def sync_datasets(benchmark_name, data_dir):
+    # Grab latest DB file from STFC s3
     LOGGER.info('Downloading Dataset Database at {}'.format(DB_URI))
     download_file(DB_URI, DB_FILE_NAME)
-
     conn = sqlite3.connect(DB_FILE_NAME)
     exports_db = pd.read_sql("select * from exports", con=conn)
 
+    # clean up db file
+    os.remove(DB_FILE_NAME)
+
+    # parse files in buckets
     bucket_name = exports_db.loc[exports_db.detail ==
-                                 'em_denoise'].bucket.values[0]
+                                 benchmark_name].bucket.values[0]
     dataset_uri = ''.join([STFC_S3_URI, bucket_name])
 
     LOGGER.info('Dataset uri {}'.format(dataset_uri))
@@ -49,15 +55,24 @@ def sync_datasets(benchmark_name, data_dir):
     bucket_contents = bucket_contents.loc[benchmark_name ==
                                           bucket_contents.name]
 
-    for index, row in bucket_contents.iterrows():
-        file_name = Path(data_dir) / Path(row.key)
+    # download data from bucket
+    start_time = time.time()
+    LOGGER.info('Downloading data for {}'.format(benchmark_name))
 
-        LOGGER.info('Downloading {}'.format(file_name))
+    for index, row in bucket_contents.iterrows():
+        file_name = Path(row.key)
+
+        LOGGER.info('Downloading {}'.format(file_name.name))
         if file_name.exists():
-            LOGGER.info('{} already downloaded'.format(file_name))
+            LOGGER.info('{} already downloaded'.format(file_name.name))
             continue
 
         file_uri = '/'.join([dataset_uri, str(file_name)])
 
+        file_name = Path(data_dir) / file_name
         file_name.parent.mkdir(parents=True, exist_ok=True)
         download_file(file_uri, file_name)
+
+    end_time = time.time()
+
+    LOGGER.info('Total Download Time (s): {}'.format(end_time - start_time))

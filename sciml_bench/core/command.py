@@ -290,6 +290,7 @@ def sysinfo():
 @cli.command(help='Download benchmark datasets from remote store')
 @click.argument('benchmark_names', nargs=-1)
 def download(benchmark_names):
+    register()
     config = load_config()
     data_dir = Path(config.get('data_dir')).expanduser()
 
