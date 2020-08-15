@@ -1,7 +1,9 @@
 import os
 import logging
-import tensorflow as tf
-import horovod.tensorflow as hvd
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+import tensorflow as tf  # noqa
+import horovod.tensorflow as hvd  # noqa
 hvd.init()
 
 # Horovod: pin GPU to be used to process local rank (one GPU per process)
@@ -14,7 +16,6 @@ if gpus:
     tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], 'GPU')
 
 # Set TF CPP logs to correct level
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 log = logging.getLogger('sciml-bench')
 log.setLevel(level=logging.INFO)
 formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
