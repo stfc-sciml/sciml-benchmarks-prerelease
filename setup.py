@@ -1,5 +1,4 @@
 import os
-from sciml_bench import __version__
 from setuptools import setup, find_packages
 
 with open('requirements.txt') as f:
@@ -13,7 +12,7 @@ os.environ['HOROVOD_GPU_BROADCAST'] = os.environ.get('HOROVOD_GPU_BROADCAST', 'N
 
 setup(
     name='sciml-bench',
-    version=__version__,
+    version='0.5.0',
     packages=find_packages(),
     package_data={'sciml_bench': ['config/*']},
     install_requires=dependancies,
