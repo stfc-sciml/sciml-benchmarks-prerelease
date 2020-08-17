@@ -58,10 +58,6 @@ sciml-bench list
 sciml-bench download
 ```
 
-```bash
-sciml-bench list
-```
-
 ### Using the Singularity container
 
 We provide a singularity container with all of the software dependencies
