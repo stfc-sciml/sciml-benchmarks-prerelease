@@ -40,7 +40,7 @@ sciml-bench run all
 sciml-bench run <name>
 ```
 
-For example
+ - For example
 
 ```bash
 sciml-bench run em_denoise
