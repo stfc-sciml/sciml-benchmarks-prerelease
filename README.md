@@ -115,12 +115,15 @@ sciml-bench run --model-dir=/my/output/location
 Each benchmark has a default parameter configuration specifying the number of
 epochs, batch size, optimizer parameters etc. to run with. These defaults can be
 overwritten using a configuration file. Currently `sciml-bench` searches for a
-file called `config.yml` in the directory it is being run in. Any entries in
+file called `sciml-bench-config.yml` in the directory it is being run in. Any entries in
 this file will overwrite the default configuration for the benchmarks. For
 example to set a different configuration for the `em_denoise` benchmark we can
 write the following:
 
 ```yaml
+data_dir: ~/sciml-bench-datasets  # Where to download and look for datasets
+model_dir: sciml-bench-out        # Where to output benchmark results
+
 em_denoise:
     epochs: 30
     optimizer: 'adam'
