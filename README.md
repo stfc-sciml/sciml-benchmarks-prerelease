@@ -49,7 +49,17 @@ sciml-bench run em_denoise
  - To list all available benchmarks
 
 ```bash
-sciml-bench list benchmarks
+sciml-bench list
+```
+
+ - To download the benchmark data
+
+```bash
+sciml-bench download
+```
+
+```bash
+sciml-bench list
 ```
 
 ### Using the Singularity container
@@ -58,13 +68,13 @@ We provide a singularity container with all of the software dependencies
 pre-installed. You can pull the image from singularity hub like so:
 
 ```bash
-singularity pull library://sljack/sciml/sciml-bench-tf
+singularity pull library://stfcsciml/default/sciml-bench
 ```
 
 Then run all the benchmarks with the following command:
 
 ```bash
-singularity run --nv sciml-bench-tf.sif
+singularity run --nv sciml-bench.sif
 ```
 
 The `--nv` flag is required if you wish to use host OS GPU devices. This flag
@@ -73,13 +83,13 @@ binds the NVIDIA drivers on the host machine to the container.
 Run individual benchmarks using: 
 
 ```bash
-singularity run --nv sciml-bench-tf.sif <benchmark-name>
+singularity run --nv sciml-bench.sif <benchmark-name>
 ```
 
 For example to run the Electron Microscopy denoise benchmark:
 
 ```bash
-singularity run --nv sciml-bench-tf.sif em-denoise
+singularity run --nv sciml-bench.sif em-denoise
 ```
 
 
