@@ -89,7 +89,7 @@ singularity run --nv sciml-bench.sif <benchmark-name>
 For example to run the Electron Microscopy denoise benchmark:
 
 ```bash
-singularity run --nv sciml-bench.sif em-denoise
+singularity run --nv sciml-bench.sif em_denoise
 ```
 
 
