@@ -28,6 +28,12 @@ tweaking depending on your platform. In general we currently require:
 sciml-bench --help
 ```
 
+ - To download the benchmark data
+
+```bash
+sciml-bench download all
+```
+
  - To run all of the benchmarks 
 
 ```bash
@@ -52,11 +58,6 @@ sciml-bench run em_denoise
 sciml-bench list
 ```
 
- - To download the benchmark data
-
-```bash
-sciml-bench download
-```
 
 ### Using the Singularity container
 
