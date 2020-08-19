@@ -6,8 +6,8 @@ The core benchmarking framework is developed by the [Scientific Machine Learning
 
 - Jeyan Thiyagalingam, RAL, STFC
 - Samuel Jackson, RAL, STFC 
-- Geoffrey Fox, [Digital Science Centre](https://www.dsc.soic.indiana.edu/), University of Indiana
-- Mallikarjun Shankar (Arjun), [Oak Ridge National Laboratory](https://www.ornl.gov/), and
+- Mallikarjun Shankar (Arjun), [Oak Ridge National Laboratory](https://www.ornl.gov/),
+- Geoffrey Fox, [Digital Science Centre](https://www.dsc.soic.indiana.edu/), University of Indiana, and
 - Tony Hey, RAL, STFC.
  
 
@@ -17,11 +17,11 @@ The core benchmarking framework is developed by the [Scientific Machine Learning
 This release of the benchmark suite consists of three benchmarks, namely, SLSTR Cloud, DMS, and EMDenoise. 
 
 
-* SLSTR Cloud benchmark was developed by Samuel Jackson, Caroline Cox, Jeyan Thiyagalingam, and Tony Hey.
+* SLSTR_Cloud benchmark was developed by Samuel Jackson, Caroline Cox (RALSpace, STFC), Jeyan Thiyagalingam, and Tony Hey.
 
-* DMS benchmark was developed by Keith Butler, Gareth Nisbet, Steve Collins, Jeyan Thiyagalingam, and Tony Hey.
+* DMS_classfication benchmark was developed by Keith Butler, Gareth Nisbet (Diamond Light Source), Steve Collins (Diamond Light Source), Jeyan Thiyagalingam, and Tony Hey.
 
-* EM Denoise benchmark was developed by Patrick Austin, Keith Butler, Jeyan Thiyagalingam, and Tony Hey.
+* EM_Denoise benchmark was developed by Patrick Austin (RAL, STFC), Keith Butler (SciML, STFC), Jeyan Thiyagalingam, and Tony Hey.
 
 Please consult the main documentation for details on individual benchmarks. 
 
