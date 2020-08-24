@@ -17,8 +17,10 @@ pip install .
 All requirements are specified in the `requirements.txt` but some might need
 tweaking depending on your platform. In general we currently require:
 
+ - Python >= 3.6
  - Tensorflow == 2.1.0
  - Horovod >= 0.19
+ - OpenMPI >= 3
 
 ## Quickstart
 
