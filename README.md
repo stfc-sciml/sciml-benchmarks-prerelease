@@ -1,3 +1,14 @@
+# Full Release
+
+This pre-release has been superceded by a full relase of the  [SciML-Bench](https://github.com/stfc-sciml/sciml-bench). Please use the full release, unless you are testing the pre-release.  This pre-release version is no longer maintained. 
+
+
+<br>
+<br>
+<br>
+<br>
+
+
 ![sciml-benchmark-logo](img/logo.png "title-1")
 
 Suite of scientific machine learning benchmarks. This repository contains a 
